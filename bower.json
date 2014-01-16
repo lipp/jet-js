@@ -1,0 +1,15 @@
+{
+	"name": "jet",
+	"version": "0.1.0",
+	"main": "./jet.js",
+	"description": "A Jet Peer implementation.",
+	"license": "MIT",
+	"repository": { 
+		"type": "git", 
+		"url": "git://github.com/lipp/jet-js.git" 
+	},
+	"ignore": [
+		".gitignore",
+		"*.md"
+	]
+}
