@@ -143,7 +143,7 @@
     if (typeof define === "function" && define.amd) {
         define(jet);
     } else if (typeof module === "object" && module.exports) {
-        module.exports = jetModule;
+        module.exports = jet;
     } else {
         this.jet = jet;
     }
