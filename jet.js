@@ -1,5 +1,6 @@
 ! function () {
     var create = function (wsURL, callbacks) {
+        callbacks = callbacks || {};
         wsURL = wsURL || ('ws://' + (window.document.domain || 'localhost') + ':11123');
         var newWebsocket = function (url, protocol) {
             if (navigator.userAgent.search("Firefox") != -1) {
@@ -13,6 +14,10 @@
             }
         };
         var ws = newWebsocket(wsURL, 'jet');
+        var encode = JSON.stringify;
+        var decode = JSON.parse;
+        var preConnectQueue = [];
+
         callbacks.onopen = callbacks.onopen || function () {
             console.log('jet open', wsURL);
         };
@@ -22,11 +27,14 @@
         callbacks.onclose = callbacks.onclose || function (code, reason) {
             console.log('jet close', code, reason);
         };
-        ws.onopen = callbacks.onopen;
+        ws.onopen = function () {
+            preConnectQueue.forEach(function (message) {
+                ws.send(encode(message));
+            });
+            callbacks.onopen();
+        };
         ws.onclose = callbacks.onclose;
         ws.onerror = callbacks.onerror;
-        var encode = JSON.stringify;
-        var decode = JSON.parse;
 
         var dispatchers = {};
         var id = 0;
@@ -66,6 +74,8 @@
             }
         };
 
+        var queue = [];
+
         var request = function (method, params, callback) {
             var request = {
                 method: method,
@@ -76,7 +86,11 @@
                 request.id = id;
                 dispatchers[id] = callback;
             }
-            ws.send(encode(request));
+            if (ws.readyState === ws.OPEN) {
+                ws.send(encode(request));
+            } else {
+                preConnectQueue.push(request);
+            }
         };
 
         var fetchId = 0;
@@ -111,9 +125,12 @@
                     }
                 });
             },
-            fetch: function (params, fetchcb, callback) {
+            fetch: function (expression, fetchcb, callback) {
                 var unfetch;
                 var id = 'f' + fetchId++;
+                // poor man's deep copy.
+                // not expected to be called often
+                var params = JSON.parse(JSON.stringify(expression));
                 params.id = id;
                 dispatchers[id] = fetchcb;
                 request('fetch', params, callback);
@@ -122,7 +139,9 @@
                         id: id
                     }, function (err, res) {
                         delete dispatchers[id];
-                        callback(err, res);
+                        if (callback) {
+                            callback(err, res);
+                        }
                     });
                 };
                 return unfetch;
