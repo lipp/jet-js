@@ -1,6 +1,6 @@
 {
 	"name": "jet",
-	"version": "0.1.0",
+	"version": "0.1.3",
 	"main": "./jet.js",
 	"description": "A Jet Peer implementation.",
 	"license": "MIT",
