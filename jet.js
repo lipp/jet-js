@@ -16,7 +16,7 @@
         var ws = newWebsocket(wsURL, 'jet');
         var encode = JSON.stringify;
         var decode = JSON.parse;
-        var preConnectQueue = [];
+        var queue = [];
 
         callbacks.onopen = callbacks.onopen || function () {
             console.log('jet open', wsURL);
@@ -28,7 +28,7 @@
             console.log('jet close', code, reason);
         };
         ws.onopen = function () {
-            preConnectQueue.forEach(function (message) {
+            queue.forEach(function (message) {
                 ws.send(encode(message));
             });
             callbacks.onopen();
@@ -62,10 +62,10 @@
             try {
                 messageObject = decode(wsMessage.data);
             } catch (e) {
-                console.log('Message is no valid JSON', wsMessage.data, e);
+                callbacks.onerror('Decoding message failed (err:' + e + ' data:' + wsMessage.data + ')');
                 return;
             }
-            if ($.isArray(messageObject)) {
+            if (Array.isArray(messageObject)) {
                 for (i = 0; i < messageObject.length; ++i) {
                     dispatchSingleMessage(messageObject[i]);
                 }
@@ -73,8 +73,6 @@
                 dispatchSingleMessage(messageObject);
             }
         };
-
-        var queue = [];
 
         var request = function (method, params, callback) {
             var request = {
@@ -89,7 +87,7 @@
             if (ws.readyState === ws.OPEN) {
                 ws.send(encode(request));
             } else {
-                preConnectQueue.push(request);
+                queue.push(request);
             }
         };
 
