@@ -584,23 +584,35 @@
                   return ref;
               };
 
-              wsock.onconnect = function() {
+              wsock.onclose = function() {
+                if (config.onClose) {
+                  config.onClose();
+                }
+              };
+
+              wsock.onerror = function(err) {
+                if (config.onError) {
+                  config.onError(err);
+                }
+              };
+
+              wsock.onopen = function() {
                   if(isDef(config.name)) {
                       j.config({
                           name: config.name
                       }, {
                           success: function() {
                               flush('config');
-                              if(config.onconnect) {
-                                  config.onconnect(j);
+                              if(config.onOpen) {
+                                  config.onOpen(j);
                               }
                           },
                           error: function(err) {
                               j.close();
                           }
                       });
-                  } else if(config.onconnect) {
-                      config.onconnect(j);
+                  } else if(config.onOpen) {
+                      config.onOpen(j);
                   }
                   flush('on_connect');
               };
