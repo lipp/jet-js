@@ -72,7 +72,7 @@
     if (typeof (err) == 'object' && err.code && err.message) {
       error = err;
     } else {
-      error = internal_error(err);
+      error = internalError(err);
     }
     return error;
   };
@@ -320,9 +320,9 @@
         path: path
       };
       var removeDispatcher = function (success) {
-        delete request_dispatchers[path];
+        delete requestDispatchers[path];
       };
-      service('remove', params, remove_dispatcher, callbacks);
+      service('remove', params, removeDispatcher, callbacks);
     };
 
     j.call = function (path, callparams, callbacks) {
@@ -370,7 +370,7 @@
         };
       }
       params.id = id;
-      service('fetch', params, add_fetcher, callbacks);
+      service('fetch', params, addFetcher, callbacks);
       ref = {
         unfetch: function (callbacks) {
           var removeDispatcher = function () {
@@ -384,7 +384,7 @@
           return isDef(requestDispatchers[id]);
         },
         fetch: function (callbacks) {
-          service('fetch', params, add_fetcher, callbacks);
+          service('fetch', params, addFetcher, callbacks);
         }
       };
       return ref;
@@ -465,11 +465,11 @@
       } else {
         throw 'invalid method desc' + (desc.path || '?');
       }
-      var ref = self.add(desc, dispatch, add_callbacks);
+      var ref = self.add(desc, dispatch, addCallbacks);
       return ref;
     };
 
-    j.state = function (desc, add_callbacks) {
+    j.state = function (desc, addCallbacks) {
       var dispatch;
       if (desc.set) {
         dispatch = function (message) {
