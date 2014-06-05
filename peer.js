@@ -1,4 +1,4 @@
-  function() {
+! function () {
 
       //- creates and returns an error table conforming to
       // JSON-RPC Invalid params.
