@@ -93,8 +93,8 @@
               var url = config.url || 'ws://127.0.0.1:11123';
               var encode = JSON.stringify;
               var decode = JSON.parse;
-              var Websocket = Websocket || MozWebSocket;
-              var wsock = new Websocket(url, 'jet');
+              var WebSocket = WebSocket || MozWebSocket;
+              var wsock = new WebSocket(url, 'jet');
               var messages = [];
 
               var queue = function(message) {
