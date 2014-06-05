@@ -1,4 +1,5 @@
-! function () {
+(function (window) {
+  'use strict';
 
       //- creates and returns an error table conforming to
       // JSON-RPC Invalid params.
@@ -616,6 +617,6 @@
       } else if(typeof module === 'object' && module.exports) {
           module.exports = jet;
       } else {
-          this.jet = jet;
+          window.jet = jet;
       }
-  }();
+  })(window);
