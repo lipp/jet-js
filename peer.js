@@ -1,6 +1,6 @@
 //- creates and returns an error table conforming to
 // JSON-RPC Invalid params.
-var invalid_params = function(data) {
+var invalidParams = function(data) {
   var err = {
     code: -32602,
     message: 'Invalid params',
@@ -11,7 +11,7 @@ var invalid_params = function(data) {
 
 // creates and returns an error table conforming to
 // JSON-RPC Response Timeout.
-var response_timeout = function(data) {
+var responseTimeout = function(data) {
   var err = {
     code: -32001,
     message: 'Response Timeout',
@@ -22,7 +22,7 @@ var response_timeout = function(data) {
 
 //- creates and returns an error table conforming to
 // JSON-RPC Internal Error.
-var internal_error = function(data) {
+var internalError = function(data) {
   var err = {
     code: -32603,
     message: 'Internal error',
@@ -33,7 +33,7 @@ var internal_error = function(data) {
 
 //- creates and returns an error table conforming to
 // JSON-RPC Parse Error.
-var parse_error = function(data) {
+var parseError = function(data) {
   var err = {
     code: -32700,
     message: 'Parse error',
@@ -44,7 +44,7 @@ var parse_error = function(data) {
 
 //- creates and returns an error table conforming to
 // JSON-RPC Method not Found.
-var method_not_found = function(method) {
+var methodNotFound = function(method) {
   var err = {
     code: -32601,
     message: 'Method not found',
@@ -55,7 +55,7 @@ var method_not_found = function(method) {
 
 //- creates and returns an error table conforming to
 // JSON-RPC Invalid request.
-var invalid_request = function(data) {
+var invalidRequest = function(data) {
   var err = {
     code: -32600,
     message: 'Invalid Request',
@@ -64,7 +64,7 @@ var invalid_request = function(data) {
   return err;
 };
 
-var error_object = function(err) {
+var errorObject = function(err) {
   var error;
   if (typeof(err) == 'object' && err.code && err.message) {
     error = err;
@@ -461,168 +461,143 @@ var create = function(config) {
       return ref;
     };
 
-    j.state = function(self,desc,add_callbacks)
-      var dispatch
-      if desc.set then
-        dispatch = function(self,message)
-          var value = message.params.value
-          var ok,result,dont_notify = pcall(desc.set,value)
-          if ok then
-            var newvalue
-            if result ~= nil then
-              newvalue = result
-            else
-              newvalue = value
-            end
-            desc.value = newvalue
-            var mid = message.id
-            if mid then
-              queue
-              {
-                id = mid,
-                result = true
-              }
-            end
-            if not dont_notify then
-              queue
-              {
-                method = 'change',
-                params = {
-                  path = desc.path,
-                  value = newvalue
-                }
-              }
-            end
-          elseif message.id then
-            queue
-            {
-              id = message.id,
-              error = error_object(result)
+    j.state = function(desc,add_callbacks) {
+      var dispatch;
+      if (desc.set) {
+        dispatch = function(message) {
+          var value = message.params.value;
+            try {
+              var result = desc.set(value) || {};
+              desc.value = result.value || value;
+            var mid = message.id;
+            if (isDef(mid)) {
+              queue({
+                id: mid,
+                result: true
+              });
             }
-          end
-        end
-      elseif desc.set_async then
-        dispatch = function(self,message)
-          var value = message.params.value
-          assert(value ~= nil,'params.value is required')
-          var reply = function(resp,dont_flush)
-            var mid = message.id
-            if mid then
+            if (!result.dontNotify) {
+              queue({
+                method: 'change',
+                params: {
+                  path: desc.path,
+                  value: desc.value
+                }
+              });
+            }
+          } catch(err) {
+          if (isDef(message.id)) {
+            queue({
+              id: message.id,
+              error: errorObject(err)
+            });
+          }
+        }
+      };
+    } else if (isDef(desc.setAsync)) {
+        dispatch = function(message) {
+          var value = message.params.value;
+          var reply = function(resp) {
+            var mid = message.id;
+            if (isDef(mid)) {
               var response = {
-                id = mid
+                id: mid
+              };
+              if (isDef(resp.result) && !isDef(resp.error)) {
+                response.result = resp.result;
+              } else if (isDef(resp.error)) {
+                response.error = errorObject(resp.error);
+              } else {
+                response.error = 'jet.peer Invalid async state response ' + desc.path;
               }
-              if resp.result ~= nil and not resp.error then
-                response.result = resp.result
-              elseif resp.error then
-                response.error = error_object(resp.error)
-              else
-                response.error = 'jet.peer Invalid async state response '..desc.path
-              end
-              queue(response)
-            end
-            if resp.result and not resp.dont_notify then
-              if resp.value ~= nil then
-                desc.value = resp.value
-              else
-                desc.value = value
-              end
-              queue
-              {
-                method = 'change',
-                params = {
-                  path = desc.path,
-                  value = desc.value
+              queue(response);
+            }
+            if (isDef(resp.result) && !isDef(resp.dontNotify)) {
+              if (isDef(resp.value)) {
+                desc.value = resp.value;
+              } else {
+                desc.value = value;
+              }
+              queue({
+                method: 'change',
+                params: {
+                  path: desc.path,
+                  value: desc.value
                 }
-              }
-            end
-            if not will_flush and not dont_flush then
-              flush('set_aync')
-            end
-          end
-          var ok,result = pcall(desc.set_async,reply,value)
-          var mid = message.id
-          if not ok and mid then
-            queue
-            {
-              id = mid,
-              error = error_object(result)
+              });
             }
-          end
-        end
-      else
-        dispatch = function(self,message)
-          var mid = message.id
-          if mid then
-            queue
-            {
-              id = mid,
-              error = invalid_params()
+            if (!willFlush && !resp.dontFlush) {
+              flush('set_aync');
             }
-          end
-        end
-      end
-      var ref = self:add(desc,dispatch,add_callbacks)
-      ref.value = function(self,value)
-        if value ~= nil then
-          desc.value = value
-          queue
-          {
-            method = 'change',
-            params = {
-              path = desc.path,
-              value = value
+          };
+          try {
+            desc.setAsync(reply,value);
+          } catch(err) {
+                      var mid = message.id;
+            if (isDef(mid)) {
+            queue({
+              id: mid,
+              error: errorObject(result)
+            });
+
             }
           }
-          if not will_flush then
-            flush()
-          end
-        else
-          return desc.value
-        end
-      end
-      return ref
-    end
+        };
+      } else {
+        dispatch = function(message) {
+          var mid = message.id;
+          if (isDef(mid)) {
+            queue({
+              id: mid,
+              error: invalidParams()
+            });
+          }
+        };
+      }
+      var ref = j.add(desc,dispatch,addCallbacks);
+      ref.value = function(value) {
+        if (isDef(value)) {
+          desc.value = value;
+          queue({
+            method: 'change',
+            params: {
+              path: desc.path,
+              value: value
+            }
+          });
+          if (!willFlush) {
+            flush();
+          }
+        } else {
+          return desc.value;
+        }
+      };
+      return ref;
+    };
 
-    var cmsgpack
-    if config.encoding then
-      if config.encoding ~= 'msgpack' then
-        error('unsupported encoding')
-      end
-      cmsgpack = require'cmsgpack'
-    end
-
-    wsock:on_connect(function()
-        if config.name or config.encoding then
-          j:config({
-              name = config.name,
-              encoding = config.encoding
+    wsock.onconnect = function() {
+        if (isDef(config.name)) {
+          j.config({
+              name: config.name
               },{
-              success = function()
-                flush('config')
-                if config.encoding then
-                  encode = cmsgpack.pack
-                  decode = cmsgpack.unpack
-                end
-                if config.on_connect then
-                  config.on_connect(j)
-                end
-              end,
-              error = function(err)
-                j:close()
-              end
-          })
-        elseif config.on_connect then
-          config.on_connect(j)
-        end
-        flush('on_connect')
-      end)
-
-    wsock:connect()
-
-    return j
-  end
-}
+              success: function() {
+                flush('config');
+                if (config.onconnect) {
+                  config.onconnect(j);
+                }
+              },
+              error: function(err) {
+                j.close();
+              }
+          });
+        } else if(config.onconnect) {
+          config.onconnect(j);
+        }
+        flush('on_connect');
+      };
+    return j;
+  };
 
 return {
-  new = new
-}
+  new: create
+};
