@@ -379,85 +379,87 @@ var create = function(config) {
     };
 
     j.method = function(desc,addCallbacks) {
-      var dispatch;
-      if (desc.call) {
-        dispatch = function(message) {
-          var params = message.params;
-          if (isArr(params) && params.length > 0) {
-              try {
-                desc.call()
-              }
-            ok,result = pcall(desc.call,unpack(params))
-          elseif pairs(params)(params) then
-            // non empty table
-            ok,result = pcall(desc.call,params)
-          else
-            ok,result = pcall(desc.call)
-          end
-          var mid = message.id
-          if mid then
-            if ok then
-              queue
-              {
-                id = mid,
-                result = result or {}
-              }
-            else
-              queue
-              {
-                id = mid,
-                error = error_object(result)
-              }
-            end
-          end
+        var dispatch;
+        if (desc.call) {
+          dispatch = function(message) {
+            var params = message.params;
+            var result;
+            var err;
+          try {
+            if (isArr(params) && params.length > 0) {
+                  result = desc.call.apply(undefined,params);
+                } else {
+                  result = desc.call.call(undefined,params);
+            }
+          }
+          catch(e) {
+            err = e;
+          }
+            var mid = message.id;
+            if (isDef(mid)) {
+            if (ok)  {
+              queue({
+                id: mid,
+                result:  result || {}
+              });
+            } else {
+              queue({
+                id: mid,
+                error: errorObject(err)
+              });
+            }
+          }
         };
       } else if (desc.callAsync) {
         dispatch = function(message) {
-          var reply = function(resp,dont_flush)
-            var mid = message.id
-            if mid then
+          var reply = function(resp,dontFlush) {
+            var mid = message.id;
+            if (isDef(mid)) {
               var response = {
-                id = mid
+                id: mid
+              };
+              if (isDef(resp.result) && !isDef(resp.error)) {
+                response.result = resp.result;
+              } else if (isDef(resp.error)) {
+                response.error = resp.error;
+              } else {
+                response.error = 'jet.peer Invalid async method response ' + desc.path;
               }
-              if type(resp.result) ~= 'nil' and not resp.error then
-                response.result = resp.result
-              elseif error then
-                response.error = resp.error
-              else
-                response.error = 'jet.peer Invalid async method response '..desc.path
-              end
-              queue(response)
-              if not will_flush and not dont_flush then
-                flush('call_async')
-              end
-            end
-          end
-
-          var ok,result
-          var params = message.params
-          if #params > 0 then
-            ok,result = pcall(desc.call_async,reply,unpack(params))
-          elseif pairs(params)(params) then
-            // non empty table
-            ok,result = pcall(desc.call_async,reply,params)
-          else
-            ok,result = pcall(desc.call_async,reply)
-          end
-          var mid = message.id
-          if not ok and mid then
-            queue
-            {
-              id = mid,
-              error = error_object(result)
+              queue(response);
+              if (!willFlush && !dontFlush) {
+                flush('call_async');
+              }
             }
-          end
-        };
-      } else {}
+          };
+
+          var params = message.params;
+            var err;
+
+          try {
+          if (isArr(params) && params.length > 0) {
+            desc.callAsync.apply(undefined,reply,params);
+          }
+          else {
+            desc.callAsync.call(undefined,reply,params);
+          }
+        } catch(e) {
+          var mid = message.id;
+          if (isDef(mid)) {
+            queue(
+            {
+              id: mid,
+              error: errorObject(result)
+            });
+          }
+        }
+      };
+
+      } else {
         throw 'invalid method desc' + (desc.path || '?');
       }
-      var ref = self:add(desc,dispatch,add_callbacks)
-      return ref
-    end
+      var ref = self.add(desc,dispatch,add_callbacks);
+      return ref;
+    };
 
     j.state = function(self,desc,add_callbacks)
       var dispatch
