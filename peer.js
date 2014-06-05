@@ -178,7 +178,7 @@
 
     var dispatchMessage = function (message) {
       try {
-        message = decode(message);
+        message = decode(message.data);
         willFlush = true;
         if (typeof (message) === 'object' && message.length > 0) {
           message.forEach(function (message) {
