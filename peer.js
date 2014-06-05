@@ -105,7 +105,7 @@
               var flush = function(reason) {
                       if(messages.length === 1) {
                           wsock.send(encode(messages[1]));
-                      } else if(message.length > 1) {
+                      } else if(messages.length > 1) {
                           wsock.send(encode(messages));
                       }
                       messages.length = 0;
