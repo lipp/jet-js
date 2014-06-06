@@ -174,7 +174,7 @@
       if (message.method && message.params) {
         dispatchRequest(message);
       } else if (isDef(message.result) || isDef(message.error)) {
-        dispatchResponse(self, message);
+        dispatchResponse(message);
       } else {
         log('unhandled message', encode(message));
       }
@@ -469,7 +469,7 @@
       } else {
         throw 'invalid method desc' + (desc.path || '?');
       }
-      var ref = self.add(desc, dispatch, addCallbacks);
+      var ref = j.add(desc, dispatch, addCallbacks);
       return ref;
     };
 
