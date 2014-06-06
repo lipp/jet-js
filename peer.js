@@ -107,8 +107,12 @@
       if (messages.length === 1) {
         encoded = encode(messages[1]);
       } else if (messages.length > 1) {
-        wsock.send(encode(messages));
+        encoded = encode(messages);
       }
+      if (config.onSend) {
+        config.onSend(encoded, messages);
+      }
+      wsock.send(encoded);
       messages.length = 0;
       willFlush = false;
     };
@@ -137,7 +141,6 @@
       }
     };
 
-    var onNoDispatcher;
     // handles both method calls and fetchers (notifications)
     var dispatchRequest = function (message) {
       var dispatcher = requestDispatchers[message.method];
@@ -150,9 +153,9 @@
         }
       } else {
         error = methodNotFound(message.method);
-        if (onNoDispatcher) {
+        if (config.onNoDispatcher) {
           try {
-            onNoDispatcher(message);
+            config.onNoDispatcher(message);
           } catch (e) {
             log(e);
           }
@@ -178,15 +181,16 @@
     };
 
     var dispatchMessage = function (message) {
+      var decoded;
       try {
-        message = decode(message.data);
+        decoded = decode(message.data);
         willFlush = true;
-        if (typeof (message) === 'object' && message.length > 0) {
-          message.forEach(function (message) {
+        if (typeof (decoded) === 'object' && message.length > 0) {
+          decoded.forEach(function (message) {
             dispatchSingleMessage(message);
           });
         } else {
-          dispatchSingleMessage(message);
+          dispatchSingleMessage(decoded);
         }
       } catch (e) {
         log('decoding message failed', e);
@@ -197,6 +201,9 @@
           }
         });
       }
+      if (config.onReceive) {
+        config.onReceive(message.data, decoded);
+      }
       flush('dispatchMessage');
     };
 
@@ -205,10 +212,6 @@
     wsock.onclose = config.onclose;
 
     var j = {};
-
-    j.onnodispatcher = function (f) {
-      onNoDispatcher = f;
-    };
 
     j.close = function () {
       flush('close');
