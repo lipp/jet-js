@@ -112,8 +112,10 @@
       if (config.onSend) {
         config.onSend(encoded, messages);
       }
-      wsock.send(encoded);
-      messages.length = 0;
+      if (encoded) {
+        wsock.send(encoded);
+        messages.length = 0;
+      }
       willFlush = false;
     };
 
