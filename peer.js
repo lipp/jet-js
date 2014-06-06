@@ -109,10 +109,10 @@
       } else if (messages.length > 1) {
         encoded = encode(messages);
       }
-      if (config.onSend) {
-        config.onSend(encoded, messages);
-      }
       if (encoded) {
+        if (config.onSend) {
+          config.onSend(encoded, messages);
+        }
         wsock.send(encoded);
         messages.length = 0;
       }
