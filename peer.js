@@ -103,8 +103,9 @@
 
     var willFlush = true;
     var flush = function (reason) {
+      var encoded;
       if (messages.length === 1) {
-        wsock.send(encode(messages[1]));
+        encoded = encode(messages[1]);
       } else if (messages.length > 1) {
         wsock.send(encode(messages));
       }
