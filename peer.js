@@ -105,7 +105,7 @@
     var flush = function (reason) {
       var encoded;
       if (messages.length === 1) {
-        encoded = encode(messages[1]);
+        encoded = encode(messages[0]);
       } else if (messages.length > 1) {
         encoded = encode(messages);
       }
