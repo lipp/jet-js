@@ -1,12 +1,12 @@
 {
 	"name": "jet",
-	"version": "0.1.3",
-	"main": "./jet.js",
-	"description": "A Jet Peer implementation.",
+	"version": "0.7.0",
+	"main": "./peer.js",
+	"description": "A Jet Peer implementation. Visit: http://jetbus.io ",
 	"license": "MIT",
-	"repository": { 
-		"type": "git", 
-		"url": "git://github.com/lipp/jet-js.git" 
+	"repository": {
+		"type": "git",
+		"url": "git://github.com/lipp/jet-js.git"
 	},
 	"ignore": [
 		".gitignore",
