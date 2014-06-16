@@ -28,9 +28,46 @@ var peer = new jet.Peer({
 
 Closes the connection to the Daemon.
 
+## `peer.set(path, value, [callbacks])`
+
+Tries to set the Jet State specified by `path` to `value`.
+
+```javascript
+peer.set('foo', 123, {
+  success: function() {
+    console.log('set finished successfully');
+  },
+  error: function(e) {
+    console.log('set failed', e);
+  }
+});
+
+// dont care about the result
+peer.set('foo', 12341);
+```
+
+## `peer.set(path, args, [callbacks])`
+
+Calls the Jet Method specified by `path` with `args` as arguments.
+`args` must be an Object or an Array.
+
+```javascript
+peer.call('sum', [1,2,3,4,5], {
+  success: function(result) {
+    console.log('sum is', result);
+  },
+  error: function(e) {
+    console.log('could not calc the sum', e);
+  }
+});
+
+// dont care about the result
+peer.call('greet', {first: 'John', last: 'Mitchell'});
+```
+
 ## `fetch = peer.fetch(rule, fetchCb, [callbacks])`
 
-Creates and return a Fetch instance. The supported fields of `rule` are:
+Creates and returns a Fetch instance. The supported fields of `rule` are:
 
 - `path`: {Object, Optional} For path based fetches
 - `value`: {Object, Optional} For value based fetches
@@ -53,7 +90,7 @@ The `fetchCb` arguments for non-sorting fetches are:
 - `value`: {Any | undefined} The current value of the State or `undefined` for Methods
 
 ```javascript
-var fetchPerons = peer.fetch({
+var fetchPersons = peer.fetch({
   path: {
     startsWith: 'persons/'
   }
@@ -81,7 +118,7 @@ The `fetchCb` argument for sorting fetches is an Object with:
 
 ```javascript
 var sortedPersons = [];
-var fetchPerons = peer.fetch({
+var fetchPersons = peer.fetch({
   path: {
     startsWith: 'persons/'
   },
@@ -94,7 +131,7 @@ var fetchPerons = peer.fetch({
   }
 }, function(sorted) {
   sortedPersons.length = sorted.n;  
-  sorted.changed.forEach(function(change) {
+  sorted.changes.forEach(function(change) {
     // indices are 1 based (not 0 based).
     sortedPersons[change.index-1] = {
       name: change.value.name,
@@ -313,4 +350,79 @@ var testAsyncAdjust = peer.state({
     },100);
   }
 });
+```
+
+## `fetcher.unfetch([callbacks])`
+
+Unfetches (removes) the Fetcher. `callbacks` is optional.
+
+```javascript
+// setup some fetcher
+var fetcher = peer.fetch({},function(){});
+
+// unfetch it
+fetcher.unfetch();
+```
+
+## `state.remove([callbacks])`
+
+Removes the State. `callbacks` is optional.
+
+```javascript
+// create some state
+var state = peer.state({
+  path: 'test',
+  value: 123
+});
+
+// remove it
+state.remove({
+  success: function() {
+    console.log('state is now removed');
+  },
+  error: function(e) {
+    console.log('could not remove state', e);
+  }
+});
+```
+
+## `method.remove([callbacks])`
+
+Removes the method. `callbacks` is optional.
+
+```javascript
+// create some method
+var method = peer.method({
+  path: 'test',
+  value: 123
+});
+
+// remove it
+method.remove({
+  success: function() {
+    console.log('method is now removed');
+  },
+  error: function(e) {
+    console.log('could not remove method', e);
+  }
+});
+```
+
+## `state.value([newValue, [callbacks]])`
+
+If `newValue` is `undefined`, returns the current value. Else posts a value
+change Notification that the State's value is now `newValue`.
+Use this for spontaneouos changes of a State which were not initially triggered
+by a `set` or `setAsync` invokation. `callbacks` is optional.
+
+```javascript
+var ticker = peer.state({
+  path: 'ticker',
+  value: 1
+});
+
+setTimeout(function() {
+  var old = ticker.value();
+  ticker.value(++old);
+},1000);
 ```
