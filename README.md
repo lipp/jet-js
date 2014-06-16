@@ -164,7 +164,7 @@ if required.
 
 ```javascript
 var greet = peer.method({
-  path: `greet`,
+  path: 'greet',
   call: function(who) {
     if (who.first === 'John') {
       throw 'John is dismissed';
@@ -386,6 +386,9 @@ state.remove({
     console.log('could not remove state', e);
   }
 });
+
+// or just
+state.remove();
 ```
 
 ## `method.remove([callbacks])`
@@ -410,12 +413,12 @@ method.remove({
 });
 ```
 
-## `state.value([newValue, [callbacks]])`
+## `state.value([newValue])`
 
 If `newValue` is `undefined`, returns the current value. Else posts a value
 change Notification that the State's value is now `newValue`.
 Use this for spontaneouos changes of a State which were not initially triggered
-by a `set` or `setAsync` invokation. `callbacks` is optional.
+by a `set` or `setAsync` invokation.
 
 ```javascript
 var ticker = peer.state({
