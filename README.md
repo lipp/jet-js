@@ -46,7 +46,7 @@ peer.set('foo', 123, {
 peer.set('foo', 12341);
 ```
 
-## `peer.set(path, args, [callbacks])`
+## `peer.call(path, args, [callbacks])`
 
 Calls the Jet Method specified by `path` with `args` as arguments.
 `args` must be an Object or an Array.
