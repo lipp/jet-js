@@ -238,7 +238,9 @@ The supported `desc` fields are:
 - `setAsync`: {Function, Optional} The callback Function, that handles State "set"
   messages (asynchronously)
 
-Don't specify `set` and `setAsync` at the same time.
+Don't specify `set` and `setAsync` at the same time. If neither one is provided,
+the State is considered read-only and an appropriate response is replied when
+someone tries to `set` the State.
 
 The argument to the `set` is the requested `newValue`. The function is free to:
 
