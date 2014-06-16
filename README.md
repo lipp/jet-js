@@ -5,7 +5,7 @@ Javascript Peer implementation of the Jet Protocol. Visit the
 
 # API
 
-## `peer = new jet.peer(config)`
+## `peer = new jet.Peer(config)`
 
 Creates and returns a new Jet Peer instance with the specified config.
 The supported config fields are:
@@ -24,10 +24,175 @@ var peer = new jet.Peer({
 });
 ```
 
+## `peer.close()`
+
+Closes the connection to the Daemon.
+
+## `fetch = peer.fetch(rule, fetchCb, [callbacks])`
+
+Creates and return a Fetch instance. The supported fields of `rule` are:
+
+- `path`: {Object, Optional} For path based fetches
+- `value`: {Object, Optional} For value based fetches
+- `valueField`: {Object, Optional} For valuefield based fetches
+- `sort`: {Object, Optional} For sorted fetches
+
+If `rule` is a empty Object, a "Fetch all" is set up.
+
+```javascript
+var fetchAll = peer.fetch({}, function(path, event, value) {
+  console.log(path, event, value);
+});
+```
+
+The `fetchCb` arguments for non-sorting fetches are:
+
+- `path`: {String} The path of the State / Method which triggered the Fetch Notification
+- `event`: {String} The event which triggered the Fetch Notification ('add', 'remove',
+   'change')
+- `value`: {Any | undefined} The current value of the State or `undefined` for Methods
+
+```javascript
+var fetchPerons = peer.fetch({
+  path: {
+    startsWith: 'persons/'
+  }
+}, function(path, event, value) {
+  console.log(path, event, value);
+}, {
+  success: function() {
+    console.log('fetch setup successfully');
+  },
+  error: function(e) {
+    console.log('fetch setup failed', e);
+  }
+}});
+```
+
+The `fetchCb` argument for sorting fetches is an Object with:
+
+- `n`: {Number} The number of matches within the given range (from-to)
+- `changes`: {Array} The changes compared to the previous time the function was
+  invoked:
+
+  - `path`: {String} The path of the State / Method which triggered the Fetch Notification
+  - `index`: {Number} The index / position within the range (from-to)
+  - `value`: {Any | undefined} The current value of the State or `undefined` for Methods
+
+```javascript
+var sortedPersons = [];
+var fetchPerons = peer.fetch({
+  path: {
+    startsWith: 'persons/'
+  },
+  sort: {
+    from: 1,
+    to: 10,
+    byValueField: {
+      age: 'number'
+    }
+  }
+}, function(sorted) {
+  sortedPersons.length = sorted.n;  
+  sorted.changed.forEach(function(change) {
+    // indices are 1 based (not 0 based).
+    sortedPersons[change.index-1] = {
+      name: change.value.name,
+      age: change.value.age
+    };
+  });
+});
+```
+
+## `method = peer.method(desc, [callbacks])`
+
+Creates and returns a Jet Method given the information provided by `desc`.
+The supported `desc` fields are:
+
+- `path`: {String} The unique path of the Method
+- `call`: {Function, Optional} The Function which "executes" the method (synchonous)
+- `callAsync`: {Function, Optional} The Function which "executes" the method
+  (asychronously)
+
+Don't specify `call` and `callAsync` at the same time.
+
+The arguments to the `call` Function are:
+
+- An Object with the forwarded "args" field from of original "call" Request
+- An unpacked Array, if the forwarded "args" of the original "call" Request
+  field was an Array
+
+The `call` method can return anything or throw an Error (String/JSON-RPC error)
+if required.
+
+```javascript
+var greet = peer.method({
+  path: `greet`,
+  call: function(who) {
+    if (who.first === 'John') {
+      throw 'John is dismissed';
+    }
+    var greet = 'Hello Mr. ' + who.last;
+    console.log(greet);
+    return greet;
+  }
+})
+
+var sum = peer.method({
+  path: `sum`,
+  call: function(a,b,c,d,e) {
+    var sum = a + b +c + d + e;
+    return sum;
+  }
+}, {
+  success: function() {
+    console.log('method added successfully');
+  },
+  error: function(e) {
+    console.log('method adding failed', e);
+  }
+})
+```
+
+The arguments to the `callAsync` Function are:
+
+- `reply`: {Function} Method for sending the result/error.
+- An Object with the forwarded "args" field from of original "call" Request
+- An unpacked Array, if the forwarded "args" of the original "call" Request
+  field was an Array
+
+The `callAsync` method can return anything or throw an Error (String/JSON-RPC error)
+if required.
+
+```javascript
+var greet = peer.method({
+  path: `greet`,
+  callAsync: function(reply, who) {
+    if (who.first === 'John') {
+      throw 'John is dismissed';
+    }
+    setTimeout(function() {
+      if (allOk) {
+        var greet = 'Hello Mr. ' + who.last;
+        console.log(greet);
+        reply({
+          result: greet
+        });
+      } else {
+        reply({
+          error: 'something went wrong'
+        });
+      }
+    }, 100);
+  }
+})
+```
+
+
 ## `state = peer.state(desc, [callbacks])`
 
-Creates a State given the information provided by `desc`. The supported `desc` fields
-are:
+Creates and returns a State given the information provided by `desc`.
+The supported `desc` fields are:
 
 - `path`: {String} The unique path of the State
 - `value`: {Any} The initial value of the State
@@ -57,6 +222,13 @@ var test = peer.state({
       throw 'too big';
     }
     setTest(newValue);
+  }
+},{
+  success: function() {
+    console.log('state added successfully');
+  },
+  error: function(e) {
+    console.log('state adding failed', e);
   }
 });
 
@@ -93,7 +265,7 @@ The `callbacks` object is optional. When specified, the supported fields are:
 - `error`: {Function, Optional} Called, when adding the State to the Daemon was not
   ok
 
-  ```javascript
+```javascript
 var testAsync = peer.state({
   path: 'testAsync',
   value: 123,
