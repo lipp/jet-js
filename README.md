@@ -3,6 +3,11 @@
 Javascript Peer implementation of the Jet Protocol. Visit the
 [Jet homepage](http://jetbus.io.) for general information.
 
+# License
+
+[MIT](http://github.com/lipp/jet-js/blob/master/LICENSE) Copyright (c) 2013, 2014
+Gerhard Preuss.
+
 # API
 
 ## `peer = new jet.Peer(config)`
