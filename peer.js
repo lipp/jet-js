@@ -12,56 +12,12 @@
     return err;
   };
 
-  // creates and returns an error table conforming to
-  // JSON-RPC Response Timeout.
-  var responseTimeout = function (data) {
-    var err = {
-      code: -32001,
-      message: 'Response Timeout',
-      data: data
-    };
-    return err;
-  };
-
-  //- creates and returns an error table conforming to
-  // JSON-RPC Internal Error.
-  var internalError = function (data) {
-    var err = {
-      code: -32603,
-      message: 'Internal error',
-      data: data,
-    };
-    return err;
-  };
-
   //- creates and returns an error table conforming to
   // JSON-RPC Parse Error.
   var parseError = function (data) {
     var err = {
       code: -32700,
       message: 'Parse error',
-      data: data
-    };
-    return err;
-  };
-
-  //- creates and returns an error table conforming to
-  // JSON-RPC Method not Found.
-  var methodNotFound = function (method) {
-    var err = {
-      code: -32601,
-      message: 'Method not found',
-      data: method
-    };
-    return err;
-  };
-
-  //- creates and returns an error table conforming to
-  // JSON-RPC Invalid request.
-  var invalidRequest = function (data) {
-    var err = {
-      code: -32600,
-      message: 'Invalid Request',
       data: data
     };
     return err;
@@ -96,6 +52,7 @@
     var WebSocket = window.WebSocket || window.MozWebSocket;
     var wsock = new WebSocket(url, 'jet');
     var messages = [];
+    var closed = false;
 
     var queue = function (message) {
       messages.push(message);
@@ -210,12 +167,11 @@
     };
 
     wsock.onmessage = dispatchMessage;
-    wsock.onerror = log;
-    wsock.onclose = config.onclose;
 
-    var j = {};
+    var that = {};
 
-    j.close = function () {
+    that.close = function () {
+      closed = true;
       flush('close');
       wsock.close();
     };
@@ -223,6 +179,9 @@
     var id = 0;
     var service = function (method, params, complete, callbacks) {
       var rpcId;
+      if (closed) {
+        throw new Error('Jet Websocket connection is closed');
+      }
       // Only make a Request, if callbacks are specified.
       // Make complete call in case of success.
       // If no id is specified in the message, no Response
@@ -276,13 +235,13 @@
       }
     };
 
-    j.batch = function (action) {
+    that.batch = function (action) {
       willFlush = true;
       action();
       flush('batch');
     };
 
-    j.add = function (desc, dispatch, callbacks) {
+    that.add = function (desc, dispatch, callbacks) {
       var path = desc.path;
       var assignDispatcher = function (success) {
         if (success) {
@@ -297,7 +256,7 @@
       var ref = {
         remove: function (callbacks) {
           if (ref.isAdded()) {
-            j.remove(path, callbacks);
+            that.remove(path, callbacks);
           } else {
             callbacks.success();
           }
@@ -312,7 +271,7 @@
           if (isDef(value)) {
             desc.value = value;
           }
-          j.add(desc, dispatch, callbacks);
+          that.add(desc, dispatch, callbacks);
         },
         path: function () {
           return path;
@@ -321,7 +280,7 @@
       return ref;
     };
 
-    j.remove = function (path, callbacks) {
+    that.remove = function (path, callbacks) {
       var params = {
         path: path
       };
@@ -331,7 +290,7 @@
       service('remove', params, removeDispatcher, callbacks);
     };
 
-    j.call = function (path, callparams, callbacks) {
+    that.call = function (path, callparams, callbacks) {
       var params = {
         path: path,
         args: callparams || []
@@ -339,11 +298,11 @@
       service('call', params, null, callbacks);
     };
 
-    j.config = function (params, callbacks) {
+    that.config = function (params, callbacks) {
       service('config', params, null, callbacks);
     };
 
-    j.set = function (path, value, callbacks) {
+    that.set = function (path, value, callbacks) {
       var params = {
         path: path,
         value: value
@@ -353,7 +312,7 @@
 
     var fetchId = 0;
 
-    j.fetch = function (params, f, callbacks) {
+    that.fetch = function (params, f, callbacks) {
       var id = '__f__' + fetchId;
       var sorting = params.sort;
       fetchId = fetchId + 1;
@@ -396,7 +355,7 @@
       return ref;
     };
 
-    j.method = function (desc, addCallbacks) {
+    that.method = function (desc, addCallbacks) {
       var dispatch;
       if (desc.call) {
         dispatch = function (message) {
@@ -471,11 +430,11 @@
       } else {
         throw 'invalid method desc' + (desc.path || '?');
       }
-      var ref = j.add(desc, dispatch, addCallbacks);
+      var ref = that.add(desc, dispatch, addCallbacks);
       return ref;
     };
 
-    j.state = function (desc, addCallbacks) {
+    that.state = function (desc, addCallbacks) {
       var dispatch;
       if (desc.set) {
         dispatch = function (message) {
@@ -568,7 +527,7 @@
           }
         };
       }
-      var ref = j.add(desc, dispatch, addCallbacks);
+      var ref = that.add(desc, dispatch, addCallbacks);
       ref.value = function (value) {
         if (isDef(value)) {
           desc.value = value;
@@ -590,12 +549,14 @@
     };
 
     wsock.onclose = function () {
+      closed = true;
       if (config.onClose) {
         config.onClose();
       }
     };
 
     wsock.onerror = function (err) {
+      closed = true;
       if (config.onError) {
         config.onError(err);
       }
@@ -603,7 +564,7 @@
 
     wsock.onopen = function () {
       if (isDef(config.name)) {
-        j.config({
+        that.config({
           name: config.name
         }, {
           success: function () {
@@ -613,7 +574,7 @@
             }
           },
           error: function (err) {
-            j.close();
+            that.close();
           }
         });
       } else if (config.onOpen) {
