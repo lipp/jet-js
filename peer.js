@@ -93,10 +93,10 @@
             callbacks.error(message.error);
           }
         } else {
-          log('invalid result:', cjson.encode(message));
+          log('invalid result:', encode(message));
         }
       } else {
-        log('invalid result id:', mid, cjson.encode(message));
+        log('invalid result id:', mid, encode(message));
       }
     };
 
@@ -570,7 +570,7 @@
           success: function () {
             flush('config');
             if (config.onOpen) {
-              config.onOpen(j);
+              config.onOpen(that);
             }
           },
           error: function (err) {
@@ -578,7 +578,7 @@
           }
         });
       } else if (config.onOpen) {
-        config.onOpen(j);
+        config.onOpen(that);
       }
       flush('on_connect');
     };
