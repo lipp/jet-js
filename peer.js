@@ -583,7 +583,7 @@
       flush('on_connect');
     };
 
-    return j;
+    return that;
   };
 
   var jet = {
