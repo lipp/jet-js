@@ -111,15 +111,14 @@ var fetchPersons = peer.fetch({
 }});
 ```
 
-The `fetchCb` argument for sorting fetches is an Object with:
+The `fetchCb` argument for sorting fetches are:
 
-- `n`: {Number} The number of matches within the given range (from-to)
 - `changes`: {Array} The changes compared to the previous time the function was
   invoked:
-
   - `path`: {String} The path of the State / Method which triggered the Fetch Notification
   - `index`: {Number} The index / position within the range (from-to)
   - `value`: {Any | undefined} The current value of the State or `undefined` for Methods
+- `n`: {Number} The number of matches within the given range (from-to)
 
 ```javascript
 var sortedPersons = [];
@@ -134,9 +133,9 @@ var fetchPersons = peer.fetch({
       age: 'number'
     }
   }
-}, function(sorted) {
-  sortedPersons.length = sorted.n;  
-  sorted.changes.forEach(function(change) {
+}, function(changes, n) {
+  sortedPersons.length = n;  
+  changes.forEach(function(change) {
     // indices are 1 based (not 0 based).
     sortedPersons[change.index-1] = {
       name: change.value.name,
