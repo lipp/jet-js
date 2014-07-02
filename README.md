@@ -1,7 +1,7 @@
 # About
 
 Javascript Peer implementation of the Jet Protocol. Visit the
-[Jet homepage](http://jetbus.io.) for general information.
+[Jet homepage](http://jetbus.io) for general information.
 
 # License
 
