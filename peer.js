@@ -293,7 +293,8 @@
     that.call = function (path, callparams, callbacks) {
       var params = {
         path: path,
-        args: callparams || []
+        args: callparams || [],
+        timeout: callbacks.timeout // optional
       };
       service('call', params, null, callbacks);
     };
@@ -305,7 +306,9 @@
     that.set = function (path, value, callbacks) {
       var params = {
         path: path,
-        value: value
+        value: value,
+        valueAsResult: callbacks.valueAsResult, // optional
+        timeout: callbacks.timeout // optional
       };
       service('set', params, null, callbacks);
     };
