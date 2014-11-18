@@ -15,4 +15,38 @@ describe('Jet module', function() {
       }
     });
   });
+
+  describe('a connected jet peer', function() {
+    var peer;
+
+    before(function(done) {
+      peer = new jet.Peer({
+        url: 'ws://localhost:11123',
+        name: 'test-peer',
+        onOpen: function() {
+          done();
+        }
+      });
+    });
+
+    it('can set a state', function(done) {
+      peer.set('acceptAll',18372, {
+        success: function(result) {
+          expect(result).to.be.true;
+          done();
+        }
+      });
+    });
+
+    it('can set a state and get the value as result', function(done) {
+      peer.set('acceptAll', false, {
+        valueAsResult: true,
+        success: function(result) {
+          expect(result).to.be.false;
+          done();
+        }
+      });
+    });
+
+  })
 });
