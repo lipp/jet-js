@@ -19,6 +19,10 @@ describe('Jet module', function() {
   describe('a connected jet peer', function() {
     var peer;
 
+    var randomPath = function() {
+      return window.navigator.userAgent + Math.random() + '' + new Date();
+    };
+
     before(function(done) {
       peer = new jet.Peer({
         url: 'ws://localhost:11123',
@@ -46,6 +50,83 @@ describe('Jet module', function() {
           done();
         }
       });
+    });
+
+    it('can set a state and errors get propagated', function(done) {
+      peer.set('acceptOnlyNumbers', 'hello', {
+        error: function(err) {
+          expect(err).to.be.an.object;
+          expect(err.code).to.be.a.number;
+          expect(err.message).to.be.a.string;
+          done();
+        }
+      });
+    });
+
+    it('can add, fetch and set a state', function(done) {
+      var random = randomPath();
+      var state = peer.state({
+        path: random,
+        value: 123,
+        set: function(newval) {
+          expect(newval).to.equal(876);
+          done();
+        }
+      });
+      peer.fetch(random, function(path, event, value) {
+        expect(path).to.equal(random);
+        expect(event).to.equal('add');
+        expect(value).to.equal(123);
+        peer.set(random, 876);
+      });
+    });
+
+    it('can add and remove a state', function(done) {
+      var random = randomPath();
+      var state = peer.state({
+        path: random,
+        value: 'asd'
+      });
+      state.remove({
+        success: function() {
+          done();
+        }
+      })
+    });
+
+    it('can add and remove a state as explicit batch', function(done) {
+      peer.batch(function() {
+        var random = randomPath();
+        var state = peer.state({
+          path: random,
+          value: 'asd'
+        });
+        state.remove({
+          success: function() {
+            done();
+          }
+        })
+      });
+    });
+
+    it('can add and call a method', function(done) {
+      var path = randomPath();
+      var m = peer.method({
+        path: path,
+        call: function(arg1, arg2, arg3) {
+          expect(arg1).to.equal(1);
+          expect(arg2).to.equal(2);
+          expect(arg3).to.be.false;
+          return arg1 + arg2;
+        }
+      });
+
+      peer.call(path,[1,2,false], {
+        success: function(result) {
+          expect(result).to.equal(3);
+          done();
+        }
+      })
     });
 
   })

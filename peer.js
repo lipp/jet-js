@@ -1,3 +1,4 @@
+/* global define, module, window */
 (function (window) {
   'use strict';
 
@@ -12,25 +13,31 @@
     return err;
   };
 
-  //- creates and returns an error table conforming to
-  // JSON-RPC Parse Error.
-  var parseError = function (data) {
-    var err = {
-      code: -32700,
-      message: 'Parse error',
-      data: data
+  var methodNotFound = function (data) {
+    return {
+        message: 'Method not found',
+        code: -32601,
+        data: data
     };
-    return err;
   };
 
   var errorObject = function (err) {
-    var error;
-    if (typeof (err) == 'object' && err.code && err.message) {
-      error = err;
+    var data;
+    if (typeof err === 'object' && isDef(err.code) && isDef(err.message)) {
+      return err;
     } else {
-      error = internalError(err);
+      if (typeof err === 'object') {
+        data = {};
+        data.message = err.message;
+        data.lineNumber = err.lineNumber;
+        data.fileName = err.fileName;
+      }
+      return {
+        code: -32602,
+        message: 'Internal error',
+        data: data || err
+      };
     }
-    return error;
   };
 
   var noop = function () {};
@@ -59,7 +66,7 @@
     };
 
     var willFlush = true;
-    var flush = function (reason) {
+    var flush = function () {
       var encoded;
       if (messages.length === 1) {
         encoded = encode(messages[0]);
@@ -107,7 +114,7 @@
       if (dispatcher) {
         try {
           dispatcher(message);
-        } catch (e) {
+        } catch (err) {
           error = errorObject(err);
         }
       } else {
@@ -163,7 +170,7 @@
       if (config.onReceive) {
         config.onReceive(message.data, decoded);
       }
-      flush('dispatchMessage');
+      flush();
     };
 
     wsock.onmessage = dispatchMessage;
@@ -172,7 +179,7 @@
 
     that.close = function () {
       closed = true;
-      flush('close');
+      flush();
       wsock.close();
     };
 
@@ -195,7 +202,7 @@
             var success = callbacks.success;
             callbacks.success = function (result) {
               complete(true);
-              success();
+              success(result);
             };
           } else {
             callbacks.success = function () {
@@ -207,7 +214,7 @@
             var error = callbacks.error;
             callbacks.error = function (result) {
               complete(false);
-              error();
+              error(result);
             };
           } else {
             callbacks.error = function () {
@@ -238,7 +245,7 @@
     that.batch = function (action) {
       willFlush = true;
       action();
-      flush('batch');
+      flush();
     };
 
     that.add = function (desc, dispatch, callbacks) {
@@ -284,7 +291,7 @@
       var params = {
         path: path
       };
-      var removeDispatcher = function (success) {
+      var removeDispatcher = function () {
         delete requestDispatchers[path];
       };
       service('remove', params, removeDispatcher, callbacks);
@@ -294,7 +301,7 @@
       var params = {
         path: path,
         args: callparams || [],
-        timeout: callbacks.timeout // optional
+        timeout: callbacks && callbacks.timeout // optional
       };
       service('call', params, null, callbacks);
     };
@@ -307,8 +314,8 @@
       var params = {
         path: path,
         value: value,
-        valueAsResult: callbacks.valueAsResult, // optional
-        timeout: callbacks.timeout // optional
+        valueAsResult: callbacks && callbacks.valueAsResult, // optional
+        timeout: callbacks && callbacks.timeout // optional
       };
       service('set', params, null, callbacks);
     };
@@ -376,7 +383,7 @@
           }
           var mid = message.id;
           if (isDef(mid)) {
-            if (ok) {
+            if (!isDef(err)) {
               queue({
                 id: mid,
                 result: result || {}
@@ -406,13 +413,12 @@
               }
               queue(response);
               if (!willFlush && !dontFlush) {
-                flush('call_async');
+                flush();
               }
             }
           };
 
           var params = message.params;
-          var err;
 
           try {
             if (isArr(params) && params.length > 0) {
@@ -420,12 +426,12 @@
             } else {
               desc.callAsync.call(undefined, reply, params);
             }
-          } catch (e) {
+          } catch (err) {
             var mid = message.id;
             if (isDef(mid)) {
               queue({
                 id: mid,
-                error: errorObject(result)
+                error: errorObject(err)
               });
             }
           }
@@ -503,7 +509,7 @@
               });
             }
             if (!willFlush && !resp.dontFlush) {
-              flush('set_aync');
+              flush();
             }
           };
           try {
@@ -513,7 +519,7 @@
             if (isDef(mid)) {
               queue({
                 id: mid,
-                error: errorObject(result)
+                error: errorObject(err)
               });
 
             }
@@ -571,19 +577,19 @@
           name: config.name
         }, {
           success: function () {
-            flush('config');
+            flush();
             if (config.onOpen) {
               config.onOpen(that);
             }
           },
-          error: function (err) {
+          error: function () {
             that.close();
           }
         });
       } else if (config.onOpen) {
         config.onOpen(that);
       }
-      flush('on_connect');
+      flush();
     };
 
     return that;
@@ -593,11 +599,17 @@
     Peer: create
   };
 
-  if (typeof define === 'function' && define.amd) {
-    define(jet);
-  } else if (typeof module === 'object' && module.exports) {
-    module.exports = jet;
-  } else {
-    window.jet = jet;
-  }
+  /* istanbul ignore next */
+  (function () {
+    'use strict';
+    if (typeof define === 'function' && define.amd) {
+      define(jet);
+    }
+    /* istanbul ignore else if */
+    else if (typeof module === 'object' && module.exports) {
+      module.exports = jet;
+    } else {
+      window.jet = jet;
+    }
+  })();
 })(window);
