@@ -81,6 +81,31 @@ describe('Jet module', function() {
       });
     });
 
+    it('can add, fetch and set a state with setAsync', function(done) {
+      var random = randomPath();
+      var state = peer.state({
+        path: random,
+        value: 123,
+        setAsync: function(newval, reply) {
+          setTimeout(function() {
+            expect(newval).to.equal(876);
+            reply();
+          },10);
+        }
+      });
+      peer.fetch(random, function(path, event, value) {
+        expect(path).to.equal(random);
+        expect(event).to.equal('add');
+        expect(value).to.equal(123);
+        peer.set(random, 876, {
+          success: function() {
+            done();
+          }
+        });
+      });
+    });
+
+
     it('can add and remove a state', function(done) {
       var random = randomPath();
       var state = peer.state({
@@ -91,10 +116,10 @@ describe('Jet module', function() {
         success: function() {
           done();
         }
-      })
+      });
     });
 
-    it('can add and remove a state as explicit batch', function(done) {
+    it('can batch', function(done) {
       peer.batch(function() {
         var random = randomPath();
         var state = peer.state({
@@ -105,7 +130,7 @@ describe('Jet module', function() {
           success: function() {
             done();
           }
-        })
+        });
       });
     });
 
@@ -126,7 +151,52 @@ describe('Jet module', function() {
           expect(result).to.equal(3);
           done();
         }
-      })
+      });
+    });
+
+    it('can add and call a method with callAsync', function(done) {
+      var path = randomPath();
+      var m = peer.method({
+        path: path,
+        callAsync: function(arg1, arg2, arg3, reply) {
+          expect(arg1).to.equal(1);
+          expect(arg2).to.equal(2);
+          expect(arg3).to.be.false;
+          setTimeout(function() {
+            reply({
+              result: arg1 + arg2
+            });
+          },10);
+        }
+      });
+
+      peer.call(path,[1,2,false], {
+        success: function(result) {
+          expect(result).to.equal(3);
+          done();
+        }
+      });
+    });
+
+
+    it('cannot add the same state twice', function(done) {
+      var path = randomPath();
+      peer.state({
+        path: path,
+        value: 123
+      });
+      peer.state({
+        path: path,
+        value: 222
+      },{
+        error: function(err) {
+          expect(err).to.be.an.object;
+          expect(err.message).to.equal('Invalid params');
+          expect(err.code).to.equal(-32602);
+          expect(err.data.pathAlreadyExists).to.equal(path);
+          done();
+        }
+      });
     });
 
   })

@@ -400,6 +400,7 @@
         dispatch = function (message) {
           var reply = function (resp, dontFlush) {
             var mid = message.id;
+            resp = resp || {};
             if (isDef(mid)) {
               var response = {
                 id: mid
@@ -422,9 +423,10 @@
 
           try {
             if (isArr(params) && params.length > 0) {
-              desc.callAsync.apply(undefined, reply, params);
+              params.push(reply);
+              desc.callAsync.apply(undefined, params);
             } else {
-              desc.callAsync.call(undefined, reply, params);
+              desc.callAsync.call(undefined, params, reply);
             }
           } catch (err) {
             var mid = message.id;
@@ -481,16 +483,16 @@
           var value = message.params.value;
           var reply = function (resp) {
             var mid = message.id;
+            resp = resp || {};
+            resp.result = isDef(resp.result) || value;
             if (isDef(mid)) {
               var response = {
                 id: mid
               };
-              if (isDef(resp.result) && !isDef(resp.error)) {
+              if (!isDef(resp.error)) {
                 response.result = resp.result;
-              } else if (isDef(resp.error)) {
-                response.error = errorObject(resp.error);
               } else {
-                response.error = 'jet.peer Invalid async state response ' + desc.path;
+                response.error = errorObject(resp.error);
               }
               queue(response);
             }
@@ -513,7 +515,7 @@
             }
           };
           try {
-            desc.setAsync(reply, value);
+            desc.setAsync(value, reply);
           } catch (err) {
             var mid = message.id;
             if (isDef(mid)) {
