@@ -16,6 +16,20 @@ describe('Jet module', function() {
     });
   });
 
+  it('peer.close immediatly does not brake', function() {
+    var peer = new jet.Peer();
+    peer.close();
+  });
+
+  it('peer.close onopen does not brake', function(done) {
+    var peer = new jet.Peer({
+      onOpen: function() {
+        peer.close();
+        done();
+      }
+    });
+  });
+
   describe('a connected jet peer', function() {
     var peer;
 
@@ -283,6 +297,21 @@ describe('Jet module', function() {
       });
     });
 
+    it('states and methods have .path()', function() {
+      var spath = randomPath();
+      var s = peer.state({
+        path: spath,
+        value: 123
+      });
+      expect(s.path()).to.equal(spath);
+      var mpath = randomPath();
+      var m = peer.method({
+        path: mpath,
+        call: function(){}
+      });
+      expect(m.path()).to.equal(mpath);
+    });
+
     it('cannot add the same state twice', function(done) {
       var path = randomPath();
       peer.state({
@@ -316,5 +345,5 @@ describe('Jet module', function() {
       });
     });
 
-  })
+  });
 });
