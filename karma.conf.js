@@ -7,11 +7,30 @@ module.exports = function(config) {
       './tests/*.js'
     ],
 
-    reporters: ['mocha'],
+    reporters: ['mocha', 'coverage'],
+
+    preprocessors: {
+      './peer.js': ['coverage']
+    },
+
+    coverageReporter: {
+      // specify a common output directory
+      dir: 'coverage',
+      reporters: [
+        // reporters not supporting the `file` property
+        { type: 'html', subdir: 'report-html' },
+        { type: 'lcov', subdir: 'report-lcov' },
+        // reporters supporting the `file` property, use `subdir` to directly
+        // output them in the `dir` directory
+        //{ type: 'lcovonly', subdir: '.', file: 'report-lcovonly.txt' },
+        { type: 'text-summary', subdir: '.', file: 'text-summary.txt' }
+      ]
+    },
 
     plugins: [
       'karma-mocha',
       'karma-chai',
+      'karma-coverage',
       'karma-chrome-launcher',
       'karma-firefox-launcher',
       'karma-safari-launcher',
