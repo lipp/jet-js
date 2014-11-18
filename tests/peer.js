@@ -119,6 +119,43 @@ describe('Jet module', function() {
       });
     });
 
+    it('can add and remove and add a state again', function(done) {
+      var random = randomPath();
+      var state = peer.state({
+        path: random,
+        value: 'asd'
+      });
+      state.remove();
+      state.add(123, {
+        success: function() {
+          peer.fetch(random, function(path, event, value) {
+            expect(value).to.equal(123);
+            done();
+          });
+        }
+      });
+    });
+
+    it('can add a state and post a state change', function(done) {
+      var random = randomPath();
+      var state;
+      peer.fetch(random, function(path, event, value) {
+        if (event === 'change') {
+          expect(value).to.equal('foobar');
+          expect(state.value()).to.equal('foobar');
+          done();
+        }
+      });
+      state = peer.state({
+        path: random,
+        value: 675
+      });
+      setTimeout(function() {
+        expect(state.value()).to.equal(675);
+        state.value('foobar');
+      },10);
+    });
+
     it('can batch', function(done) {
       peer.batch(function() {
         var random = randomPath();
