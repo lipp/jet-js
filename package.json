@@ -34,7 +34,7 @@
     "karma-chrome-launcher": "*",
     "karma-firefox-launcher": "*",
     "karma-mocha": "*",
-    "karma-mocha-reporter": "^0.3.1",
+    "karma-mocha-reporter": "*",
     "karma-opera-launcher": "*",
     "karma-safari-launcher": "*",
     "mocha": "*",
