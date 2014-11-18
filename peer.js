@@ -151,7 +151,7 @@
       try {
         decoded = decode(message.data);
         willFlush = true;
-        if (typeof (decoded) === 'object' && decoded.length > 0) {
+        if (isArr(decoded)) {
           decoded.forEach(function (message) {
             dispatchSingleMessage(message);
           });
