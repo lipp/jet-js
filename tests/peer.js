@@ -81,6 +81,20 @@ describe('Jet module', function() {
       });
     });
 
+    it('can add a read-only state and setting it fails', function(done) {
+      var random = randomPath();
+      var state = peer.state({
+        path: random,
+        value: 123
+      });
+      peer.set(random, 6237, {
+        error: function(err) {
+          expect(err).to.be.an.object;
+          done();
+        }
+      });
+    });
+
     it('can add, fetch and set a state with setAsync', function(done) {
       var random = randomPath();
       var state = peer.state({
@@ -104,6 +118,24 @@ describe('Jet module', function() {
         });
       });
     });
+
+    it('can add and set a state with setAsync (setAsync is "safe")', function(done) {
+      var random = randomPath();
+      var state = peer.state({
+        path: random,
+        value: 123,
+        setAsync: function(newval, reply) {
+          throw new Error();
+        }
+      });
+      peer.set(random, 876, {
+          error: function(err) {
+            expect(err).to.be.an.object;
+            done();
+          }
+      });
+    });
+
 
 
     it('can add and remove a state', function(done) {
@@ -191,6 +223,25 @@ describe('Jet module', function() {
       });
     });
 
+    it('can add and call a method (call impl is "safe")', function(done) {
+      var path = randomPath();
+      var m = peer.method({
+        path: path,
+        call: function(arg1, arg2, arg3) {
+          throw new Error("argh");
+        }
+      });
+
+      peer.call(path,[1,2,false], {
+        error: function(err) {
+          expect(err).to.be.an.object;
+          expect(err.data.message).to.equal('argh');
+          done();
+        }
+      });
+    });
+
+
     it('can add and call a method with callAsync', function(done) {
       var path = randomPath();
       var m = peer.method({
@@ -215,6 +266,22 @@ describe('Jet module', function() {
       });
     });
 
+    it('callAsync is "safe"', function(done) {
+      var path = randomPath();
+      var m = peer.method({
+        path: path,
+        callAsync: function(arg1, arg2, arg3, reply) {
+          throw new Error('argh');
+        }
+      });
+
+      peer.call(path,[1,2,false], {
+        error: function(err) {
+          expect(err).to.be.an.object;
+          done();
+        }
+      });
+    });
 
     it('cannot add the same state twice', function(done) {
       var path = randomPath();
@@ -232,6 +299,19 @@ describe('Jet module', function() {
           expect(err.code).to.equal(-32602);
           expect(err.data.pathAlreadyExists).to.equal(path);
           done();
+        }
+      });
+    });
+
+    it('can fetch and unfetch', function(done) {
+      var fetcher = peer.fetch('bla', function(){});
+      fetcher.unfetch({
+        success: function() {
+          fetcher.fetch({
+            success: function() {
+              done();
+            }
+          });
         }
       });
     });

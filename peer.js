@@ -533,7 +533,7 @@
           if (isDef(mid)) {
             queue({
               id: mid,
-              error: invalidParams()
+              error: invalidParams(desc.path + ' is read-only')
             });
           }
         };
