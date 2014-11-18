@@ -13,14 +13,6 @@
     return err;
   };
 
-  var methodNotFound = function (data) {
-    return {
-        message: 'Method not found',
-        code: -32601,
-        data: data
-    };
-  };
-
   var errorObject = function (err) {
     var data;
     if (typeof err === 'object' && isDef(err.code) && isDef(err.message)) {
@@ -40,8 +32,6 @@
     }
   };
 
-  var noop = function () {};
-
   var isDef = function (x) {
     return typeof (x) !== 'undefined';
   };
@@ -52,7 +42,6 @@
 
   var create = function (config) {
     config = config || {};
-    var log = config.log || noop;
     var url = config.url || 'ws://127.0.0.1:11123';
     var encode = JSON.stringify;
     var decode = JSON.parse;
@@ -99,40 +88,22 @@
           if (callbacks.error) {
             callbacks.error(message.error);
           }
-        } else {
-          log('invalid result:', encode(message));
         }
-      } else {
-        log('invalid result id:', mid, encode(message));
       }
     };
 
     // handles both method calls and fetchers (notifications)
     var dispatchRequest = function (message) {
       var dispatcher = requestDispatchers[message.method];
-      var error;
-      if (dispatcher) {
-        try {
-          dispatcher(message);
-        } catch (err) {
-          error = errorObject(err);
+      try {
+        dispatcher(message);
+      } catch (err) {
+        if (isDef(message.id)) {
+          queue({
+            id: message.id,
+            error: errorObject(err)
+          });
         }
-      } else {
-        error = methodNotFound(message.method);
-        if (config.onNoDispatcher) {
-          try {
-            config.onNoDispatcher(message);
-          } catch (e) {
-            log(e);
-          }
-        }
-      }
-      var mid = message.id;
-      if (error && isDef(mid)) {
-        queue({
-          id: mid,
-          error: error
-        });
       }
     };
 
@@ -141,34 +112,21 @@
         dispatchRequest(message);
       } else if (isDef(message.result) || isDef(message.error)) {
         dispatchResponse(message);
-      } else {
-        log('unhandled message', encode(message));
       }
     };
 
     var dispatchMessage = function (message) {
-      var decoded;
-      try {
-        decoded = decode(message.data);
-        willFlush = true;
-        if (isArr(decoded)) {
-          decoded.forEach(function (message) {
-            dispatchSingleMessage(message);
-          });
-        } else {
-          dispatchSingleMessage(decoded);
-        }
-      } catch (e) {
-        log('decoding message failed', e);
-        queue({
-          error: {
-            code: -32700,
-            messsage: 'Parse error'
-          }
-        });
-      }
+      var decoded = decode(message.data);
+      willFlush = true;
       if (config.onReceive) {
         config.onReceive(message.data, decoded);
+      }
+      if (isArr(decoded)) {
+        decoded.forEach(function (message) {
+          dispatchSingleMessage(message);
+        });
+      } else {
+        dispatchSingleMessage(decoded);
       }
       flush();
     };
