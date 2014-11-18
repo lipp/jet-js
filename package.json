@@ -1,0 +1,42 @@
+{
+  "name": "jet-js",
+  "version": "0.0.0",
+  "description": "Jet Peer implementation for Javascript (Browser)",
+  "main": "peer.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "./node_modules/karma/bin/karma start --single-run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lipp/jet-js.git"
+  },
+  "keywords": [
+    "jet",
+    "peer",
+    "messagebus",
+    "bus",
+    "ipc",
+    "async"
+  ],
+  "author": "Gerhard Preuss",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/lipp/jet-js/issues"
+  },
+  "homepage": "https://github.com/lipp/jet-js",
+  "devDependencies": {
+    "chai": "^1.10.0",
+    "karma": "^0.12.25",
+    "karma-chai": "^0.1.0",
+    "karma-chrome-launcher": "^0.1.5",
+    "karma-firefox-launcher": "^0.1.3",
+    "karma-mocha": "^0.1.9",
+    "karma-opera-launcher": "^0.1.0",
+    "karma-safari-launcher": "^0.1.1",
+    "mocha": "^2.0.1",
+    "node-jet": "0.0.11"
+  }
+}
