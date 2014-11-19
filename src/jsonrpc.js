@@ -1,3 +1,4 @@
+/* globals window */
 'use strict';
 
 var jet = window.jet = window.jet || {};
@@ -11,7 +12,6 @@ jet.JsonRPC = function(config) {
   var messages = [];
   var isDef = jet.util.isDef;
   var isArr = jet.util.isArr;
-  var invalidParams = jet.util.invalidParams;
   var errorObject = jet.util.errorObject;
   var closed;
   var that = this;
