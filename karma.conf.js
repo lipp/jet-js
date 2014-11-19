@@ -4,6 +4,7 @@ module.exports = function(config) {
 
     files: [
       './src/util.js',
+      './src/jsonrpc.js',
       './src/peer.js',
       './tests/*.js'
     ],
