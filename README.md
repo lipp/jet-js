@@ -4,6 +4,7 @@ Javascript Peer implementation of the Jet Protocol. Visit the
 [Jet homepage](http://jetbus.io) for general information.
 [![Build Status](https://travis-ci.org/lipp/jet-js.png?branch=master)](https://travis-ci.org/lipp/jet-js/builds)
 [![Coverage Status](https://img.shields.io/coveralls/lipp/jet-js.svg)](https://coveralls.io/r/lipp/jet-js?branch=master)
+[![Code Climate](https://codeclimate.com/github/lipp/jet-js/badges/gpa.svg)](https://codeclimate.com/github/lipp/jet-js)
 
 # License
 
