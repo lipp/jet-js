@@ -3,14 +3,15 @@ module.exports = function(config) {
     frameworks: ['mocha', 'chai'],
 
     files: [
-      './peer.js',
+      './src/util.js',
+      './src/peer.js',
       './tests/*.js'
     ],
 
     reporters: ['mocha', 'coverage'],
 
     preprocessors: {
-      './peer.js': ['coverage']
+      'src/*.js': ['coverage']
     },
 
     coverageReporter: {
