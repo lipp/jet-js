@@ -126,29 +126,19 @@ jet.JsonRPC = function(config) {
       id = id + 1;
       rpcId = id;
       if (complete) {
-        if (callbacks.success) {
-          var success = callbacks.success;
-          callbacks.success = function (result) {
-            complete(true);
-            success(result);
-          };
-        } else {
-          callbacks.success = function () {
-            complete(true);
-          };
-        }
-
-        if (callbacks.error) {
-          var error = callbacks.error;
-          callbacks.error = function (result) {
-            complete(false);
-            error(result);
-          };
-        } else {
-          callbacks.error = function () {
-            complete(false);
-          };
-        }
+        ['success','error'].forEach(function(cb) {
+          if (callbacks[cb]) {
+            var orig = callbacks[cb];
+            callbacks[cb] = function(result) {
+              complete(cb === 'success');
+              orig(result);
+            };
+          } else {
+            callbacks[cb] = function() {
+              complete(cb === 'success');
+            };
+          }
+        });
       }
       responseDispatchers[id] = callbacks;
     } else {
