@@ -40,6 +40,8 @@
     "karma-opera-launcher": "*",
     "karma-safari-launcher": "*",
     "mocha": "*",
-    "node-jet": "*"
+    "node-jet": "*",
+    "urequire": "*",
+    "urequire-cli": "*"
   }
 }

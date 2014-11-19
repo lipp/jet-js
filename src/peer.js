@@ -1,47 +1,15 @@
 /* global define, module, window */
-(function (window) {
+
   'use strict';
 
-  //- creates and returns an error table conforming to
-  // JSON-RPC Invalid params.
-  var invalidParams = function (data) {
-    var err = {
-      code: -32602,
-      message: 'Invalid params',
-      data: data
-    };
-    return err;
-  };
+var jet = window.jet = window.jet || {};
 
-  var errorObject = function (err) {
-    var data;
-    if (typeof err === 'object' && isDef(err.code) && isDef(err.message)) {
-      return err;
-    } else {
-      if (typeof err === 'object') {
-        data = {};
-        data.message = err.message;
-        data.lineNumber = err.lineNumber;
-        data.fileName = err.fileName;
-      }
-      return {
-        code: -32602,
-        message: 'Internal error',
-        data: data || err
-      };
-    }
-  };
-
-  var isDef = function (x) {
-    return typeof (x) !== 'undefined';
-  };
-
-  var isArr = function (x) {
-    return x instanceof Array;
-  };
-
-  var create = function (config) {
+jet.Peer = function (config) {
     config = config || {};
+    var isDef = jet.util.isDef;
+    var isArr = jet.util.isArr;
+    var invalidParams = jet.util.invalidParams;
+    var errorObject = jet.util.errorObject;
     var url = config.url || 'ws://127.0.0.1:11123';
     var encode = JSON.stringify;
     var decode = JSON.parse;
@@ -554,22 +522,3 @@
 
     return that;
   };
-
-  var jet = {
-    Peer: create
-  };
-
-  /* istanbul ignore next */
-  (function () {
-    'use strict';
-    if (typeof define === 'function' && define.amd) {
-      define(jet);
-    }
-    /* istanbul ignore else if */
-    else if (typeof module === 'object' && module.exports) {
-      module.exports = jet;
-    } else {
-      window.jet = jet;
-    }
-  })();
-})(window);
