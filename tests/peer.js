@@ -34,7 +34,7 @@ describe('Jet module', function() {
     var peer;
 
     var randomPath = function() {
-      return window.navigator.userAgent + Math.random() + '' + new Date();
+      return 'jet-js/' + window.navigator.userAgent + Math.random() + '' + new Date();
     };
 
     before(function(done) {
@@ -79,19 +79,25 @@ describe('Jet module', function() {
 
     it('can add, fetch and set a state', function(done) {
       var random = randomPath();
+      var newVal;
       var state = peer.state({
         path: random,
         value: 123,
         set: function(newval) {
+          newVal = newval;
           expect(newval).to.equal(876);
-          done();
         }
       });
       peer.fetch(random, function(path, event, value) {
         expect(path).to.equal(random);
         expect(event).to.equal('add');
         expect(value).to.equal(123);
-        peer.set(random, 876);
+        peer.set(random, 876, {
+          success: function() {
+            expect(newVal).to.equal(876);
+            done();
+          }
+        });
       });
     });
 
@@ -108,6 +114,50 @@ describe('Jet module', function() {
         }
       });
     });
+
+    it('can add a state and error propagates', function(done) {
+      var random = randomPath();
+      var state = peer.state({
+        path: random,
+        value: 123,
+        set: function(newval) {
+          if (newval > 200) {
+            throw new Error('out of range');
+          }
+        }
+      });
+      peer.set(random, 6237, {
+        error: function(err) {
+          expect(err.message).to.equal('Internal error');
+          expect(err.data.message).to.equal('out of range');
+          done();
+        }
+      });
+    });
+
+    it('can add a state and custom rpc error propagates', function(done) {
+      var random = randomPath();
+      var state = peer.state({
+        path: random,
+        value: 123,
+        set: function(newval) {
+          if (newval > 200) {
+            throw {
+              code: 1234,
+              message: 'out of range'
+            };
+          }
+        }
+      });
+      peer.set(random, 6237, {
+        error: function(err) {
+          expect(err.message).to.equal('out of range');
+          expect(err.code).to.equal(1234);
+          done();
+        }
+      });
+    });
+
 
     it('can add, fetch and set a state with setAsync', function(done) {
       var random = randomPath();
@@ -150,7 +200,17 @@ describe('Jet module', function() {
       });
     });
 
-
+    it('can add a state and success callback is executed', function(done) {
+      var random = randomPath();
+      var state = peer.state({
+        path: random,
+        value: 'asd'
+      },{
+        success: function() {
+          done();
+        }
+      });
+    });
 
     it('can add and remove a state', function(done) {
       var random = randomPath();
@@ -165,7 +225,65 @@ describe('Jet module', function() {
       });
     });
 
+    it('remove a state twice fails', function(done) {
+      var random = randomPath();
+      var removed;
+      var state = peer.state({
+        path: random,
+        value: 'asd'
+      });
+      state.remove({
+        success: function() {
+          removed = true;
+        }
+      });
+      state.remove({
+        error: function() {
+          expect(removed).to.be.true;
+          expect(state.isAdded()).to.be.false;
+          done();
+        }
+      });
+    });
+
+    it('add a state twice fails', function(done) {
+      var random = randomPath();
+      var wasAdded;
+      var state = peer.state({
+        path: random,
+        value: 'asd'
+      },{
+        success: function() {
+          expect(state.isAdded()).to.be.true;
+          wasAdded = true;
+        }
+      });
+      state.add(undefined, {
+        error: function() {
+          expect(wasAdded).to.be.true;
+          done();
+        }
+      });
+    });
+
     it('can add and remove and add a state again', function(done) {
+      var random = randomPath();
+      var state = peer.state({
+        path: random,
+        value: 'asd'
+      });
+      state.remove();
+      state.add(undefined, {
+        success: function() {
+          peer.fetch(random, function(path, event, value) {
+            expect(value).to.equal('asd');
+            done();
+          });
+        }
+      });
+    });
+
+    it('can add and remove and add a state again with new value', function(done) {
       var random = randomPath();
       var state = peer.state({
         path: random,
@@ -181,6 +299,7 @@ describe('Jet module', function() {
         }
       });
     });
+
 
     it('can add a state and post a state change', function(done) {
       var random = randomPath();
@@ -280,6 +399,56 @@ describe('Jet module', function() {
       });
     });
 
+    it('can add and call a method with callAsync which fails', function(done) {
+      var path = randomPath();
+      var m = peer.method({
+        path: path,
+        callAsync: function(arg1, arg2, arg3, reply) {
+          expect(arg1).to.equal(1);
+          expect(arg2).to.equal(2);
+          expect(arg3).to.be.false;
+          setTimeout(function() {
+            reply({
+              error: 'dont-like-this'
+            });
+          },10);
+        }
+      });
+
+      peer.call(path,[1,2,false], {
+        error: function(err) {
+          expect(err.code).to.equal(-32602);
+          expect(err.message).to.equal('Internal error');
+          expect(err.data).to.equal('dont-like-this');
+          done();
+        }
+      });
+    });
+
+    it('can add and call a method with callAsync and replying with invalid nothing fails', function(done) {
+      var path = randomPath();
+      var m = peer.method({
+        path: path,
+        callAsync: function(arg1, arg2, arg3, reply) {
+          expect(arg1).to.equal(1);
+          expect(arg2).to.equal(2);
+          expect(arg3).to.be.false;
+          setTimeout(function() {
+            reply();
+          },10);
+        }
+      });
+
+      peer.call(path,[1,2,false], {
+        error: function(err) {
+          expect(err.code).to.equal(-32602);
+          expect(err.message).to.equal('Internal error');
+          expect(err.data).to.contain('Invalid');
+          done();
+        }
+      });
+    });
+
     it('callAsync is "safe"', function(done) {
       var path = randomPath();
       var m = peer.method({
@@ -333,11 +502,20 @@ describe('Jet module', function() {
     });
 
     it('can fetch and unfetch', function(done) {
-      var fetcher = peer.fetch('bla', function(){});
+      var setupOK;
+      var fetcher = peer.fetch('bla', function(){}, {
+        success: function() {
+          setupOK = true;
+          expect(fetcher.isFetching()).to.be.true;
+        }
+      });
       fetcher.unfetch({
         success: function() {
+          expect(setupOK).to.be.true;
+          expect(fetcher.isFetching()).to.be.false;
           fetcher.fetch({
             success: function() {
+              expect(fetcher.isFetching()).to.be.true;
               done();
             }
           });
