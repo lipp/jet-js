@@ -449,29 +449,28 @@ var requirejs, require, define;
 
 define("almond", function(){});
 
-define('peer',['require','exports','module'],function (require, exports, module) {
+define('jsonrpc',['require','exports','module'],function (require, exports, module) {
   
 
 "use strict";
 var jet = window.jet = window.jet || {};
-jet.Peer = function (config) {
-  config = config || {};
-  var isDef = jet.util.isDef;
-  var isArr = jet.util.isArr;
-  var invalidParams = jet.util.invalidParams;
-  var errorObject = jet.util.errorObject;
-  var url = config.url || "ws://127.0.0.1:11123";
+jet.JsonRPC = function (config) {
   var encode = JSON.stringify;
   var decode = JSON.parse;
   var WebSocket = window.WebSocket || window.MozWebSocket;
+  var url = config.url || "ws://127.0.0.1:11123";
   var wsock = new WebSocket(url, "jet");
   var messages = [];
-  var closed = false;
-  var queue = function (message) {
+  var isDef = jet.util.isDef;
+  var isArr = jet.util.isArr;
+  var errorObject = jet.util.errorObject;
+  var closed;
+  var that = this;
+  this.queue = function (message) {
     messages.push(message);
   };
   var willFlush = true;
-  var flush = function () {
+  this.flush = function () {
     var encoded;
     if (messages.length === 1) {
       encoded = encode(messages[0]);
@@ -489,6 +488,15 @@ jet.Peer = function (config) {
   };
   var requestDispatchers = {};
   var responseDispatchers = {};
+  this.addRequestDispatcher = function (id, dispatch) {
+    requestDispatchers[id] = dispatch;
+  };
+  this.removeRequestDispatcher = function (id) {
+    delete requestDispatchers[id];
+  };
+  this.hasRequestDispatcher = function (id) {
+    return isDef(requestDispatchers[id]);
+  };
   var dispatchResponse = function (message) {
     var mid = message.id;
     var callbacks = responseDispatchers[mid];
@@ -511,7 +519,7 @@ jet.Peer = function (config) {
       dispatcher(message);
     } catch (err) {
       if (isDef(message.id)) {
-        queue({
+        that.queue({
           id: message.id,
           error: errorObject(err)
         });
@@ -538,17 +546,22 @@ jet.Peer = function (config) {
     } else {
       dispatchSingleMessage(decoded);
     }
-    flush();
+    that.flush();
   };
   wsock.onmessage = dispatchMessage;
-  var that = {};
-  that.close = function () {
-    closed = true;
-    flush();
-    wsock.close();
+  var addHook = function (callbacks, callbackName, hook) {
+    if (callbacks[callbackName]) {
+      var orig = callbacks[callbackName];
+      callbacks[callbackName] = function (result) {
+        hook();
+        orig(result);
+      };
+    } else {
+      callbacks[callbackName] = hook;
+    }
   };
   var id = 0;
-  var service = function (method, params, complete, callbacks) {
+  this.service = function (method, params, complete, callbacks) {
     var rpcId;
     if (closed) {
       throw new Error("Jet Websocket connection is closed");
@@ -558,28 +571,12 @@ jet.Peer = function (config) {
       id = id + 1;
       rpcId = id;
       if (complete) {
-        if (callbacks.success) {
-          var success = callbacks.success;
-          callbacks.success = function (result) {
-            complete(true);
-            success(result);
-          };
-        } else {
-          callbacks.success = function () {
-            complete(true);
-          };
-        }
-        if (callbacks.error) {
-          var error = callbacks.error;
-          callbacks.error = function (result) {
-            complete(false);
-            error(result);
-          };
-        } else {
-          callbacks.error = function () {
-            complete(false);
-          };
-        }
+        addHook(callbacks, "success", function () {
+          complete(true);
+        });
+        addHook(callbacks, "error", function () {
+          complete(false);
+        });
       }
       responseDispatchers[id] = callbacks;
     } else {
@@ -593,43 +590,99 @@ jet.Peer = function (config) {
       params: params
     };
     if (willFlush) {
-      queue(message);
+      that.queue(message);
     } else {
       wsock.send(encode(message));
     }
   };
-  that.batch = function (action) {
+  this.batch = function (action) {
     willFlush = true;
     action();
-    flush();
+    that.flush();
+  };
+  this.close = function () {
+    closed = true;
+    that.flush();
+    wsock.close();
+  };
+  wsock.onclose = function () {
+    closed = true;
+    if (config.onClose) {
+      config.onClose();
+    }
+  };
+  wsock.onerror = function (err) {
+    closed = true;
+    if (config.onError) {
+      config.onError(err);
+    }
+  };
+  that.config = function (params, callbacks) {
+    that.service("config", params, null, callbacks);
+  };
+  wsock.onopen = function () {
+    if (isDef(config.name)) {
+      that.config({ name: config.name }, {
+        success: function () {
+          that.flush();
+          if (config.onOpen) {
+            config.onOpen();
+          }
+        },
+        error: function () {
+          that.close();
+        }
+      });
+    } else if (config.onOpen) {
+      config.onOpen(that);
+    }
+    that.flush();
+  };
+  return this;
+};
+
+return module.exports;
+
+});
+define('peer',['require','exports','module'],function (require, exports, module) {
+  
+
+"use strict";
+var jet = window.jet = window.jet || {};
+jet.Peer = function (config) {
+  config = config || {};
+  var isDef = jet.util.isDef;
+  var isArr = jet.util.isArr;
+  var invalidParams = jet.util.invalidParams;
+  var errorObject = jet.util.errorObject;
+  var jsonrpc = new jet.JsonRPC(config);
+  var that = this;
+  that.close = function () {
+    jsonrpc.close();
+  };
+  that.batch = function (action) {
+    jsonrpc.batch(action);
   };
   that.add = function (desc, dispatch, callbacks) {
     var path = desc.path;
-    var assignDispatcher = function (success) {
+    var addDispatcher = function (success) {
       if (success) {
-        requestDispatchers[path] = dispatch;
+        jsonrpc.addRequestDispatcher(path, dispatch);
       }
     };
     var params = {
       path: path,
       value: desc.value
     };
-    service("add", params, assignDispatcher, callbacks);
+    jsonrpc.service("add", params, addDispatcher, callbacks);
     var ref = {
       remove: function (callbacks) {
-        if (ref.isAdded()) {
-          that.remove(path, callbacks);
-        } else {
-          callbacks.success();
-        }
+        that.remove(path, callbacks);
       },
       isAdded: function () {
-        return isDef(requestDispatchers[path]);
+        return jsonrpc.hasRequestDispatcher(path);
       },
       add: function (value, callbacks) {
-        if (ref.isAdded()) {
-          callbacks.success();
-        }
         if (isDef(value)) {
           desc.value = value;
         }
@@ -644,9 +697,9 @@ jet.Peer = function (config) {
   that.remove = function (path, callbacks) {
     var params = { path: path };
     var removeDispatcher = function () {
-      delete requestDispatchers[path];
+      jsonrpc.removeRequestDispatcher(path);
     };
-    service("remove", params, removeDispatcher, callbacks);
+    jsonrpc.service("remove", params, removeDispatcher, callbacks);
   };
   that.call = function (path, callparams, callbacks) {
     var params = {
@@ -654,10 +707,7 @@ jet.Peer = function (config) {
       args: callparams || [],
       timeout: callbacks && callbacks.timeout
     };
-    service("call", params, null, callbacks);
-  };
-  that.config = function (params, callbacks) {
-    service("config", params, null, callbacks);
+    jsonrpc.service("call", params, null, callbacks);
   };
   that.set = function (path, value, callbacks) {
     var params = {
@@ -666,7 +716,7 @@ jet.Peer = function (config) {
       valueAsResult: callbacks && callbacks.valueAsResult,
       timeout: callbacks && callbacks.timeout
     };
-    service("set", params, null, callbacks);
+    jsonrpc.service("set", params, null, callbacks);
   };
   var fetchId = 0;
   that.fetch = function (params, f, callbacks) {
@@ -675,32 +725,32 @@ jet.Peer = function (config) {
     fetchId = fetchId + 1;
     var ref;
     var addFetcher = function () {
-      requestDispatchers[id] = function (message) {
+      jsonrpc.addRequestDispatcher(id, function (message) {
         var params = message.params;
         if (!isDef(sorting)) {
           f(params.path, params.event, params.value, ref);
         } else {
           f(params.changes, params.n, ref);
         }
-      };
+      });
     };
     if (typeof params === "string") {
       params = { path: { contains: params } };
     }
     params.id = id;
-    service("fetch", params, addFetcher, callbacks);
+    jsonrpc.service("fetch", params, addFetcher, callbacks);
     ref = {
       unfetch: function (callbacks) {
         var removeDispatcher = function () {
-          delete requestDispatchers[id];
+          jsonrpc.removeRequestDispatcher(id);
         };
-        service("unfetch", { id: id }, removeDispatcher, callbacks);
+        jsonrpc.service("unfetch", { id: id }, removeDispatcher, callbacks);
       },
       isFetching: function () {
-        return isDef(requestDispatchers[id]);
+        return jsonrpc.hasRequestDispatcher(id);
       },
       fetch: function (callbacks) {
-        service("fetch", params, addFetcher, callbacks);
+        jsonrpc.service("fetch", params, addFetcher, callbacks);
       }
     };
     return ref;
@@ -724,12 +774,12 @@ jet.Peer = function (config) {
         var mid = message.id;
         if (isDef(mid)) {
           if (!isDef(err)) {
-            queue({
+            jsonrpc.queue({
               id: mid,
               result: result || {}
             });
           } else {
-            queue({
+            jsonrpc.queue({
               id: mid,
               error: errorObject(err)
             });
@@ -738,7 +788,7 @@ jet.Peer = function (config) {
       };
     } else if (desc.callAsync) {
       dispatch = function (message) {
-        var reply = function (resp, dontFlush) {
+        var reply = function (resp) {
           var mid = message.id;
           resp = resp || {};
           if (isDef(mid)) {
@@ -746,14 +796,12 @@ jet.Peer = function (config) {
             if (isDef(resp.result) && !isDef(resp.error)) {
               response.result = resp.result;
             } else if (isDef(resp.error)) {
-              response.error = resp.error;
+              response.error = errorObject(resp.error);
             } else {
-              response.error = "jet.peer Invalid async method response " + desc.path;
+              response.error = errorObject("jet.peer Invalid async method response " + desc.path);
             }
-            queue(response);
-            if (!willFlush && !dontFlush) {
-              flush();
-            }
+            jsonrpc.queue(response);
+            jsonrpc.flush();
           }
         };
         var params = message.params;
@@ -767,7 +815,7 @@ jet.Peer = function (config) {
         } catch (err) {
           var mid = message.id;
           if (isDef(mid)) {
-            queue({
+            jsonrpc.queue({
               id: mid,
               error: errorObject(err)
             });
@@ -790,13 +838,13 @@ jet.Peer = function (config) {
           desc.value = result.value || value;
           var mid = message.id;
           if (isDef(mid)) {
-            queue({
+            jsonrpc.queue({
               id: mid,
               result: true
             });
           }
           if (!result.dontNotify) {
-            queue({
+            jsonrpc.queue({
               method: "change",
               params: {
                 path: desc.path,
@@ -806,7 +854,7 @@ jet.Peer = function (config) {
           }
         } catch (err) {
           if (isDef(message.id)) {
-            queue({
+            jsonrpc.queue({
               id: message.id,
               error: errorObject(err)
             });
@@ -827,7 +875,7 @@ jet.Peer = function (config) {
             } else {
               response.error = errorObject(resp.error);
             }
-            queue(response);
+            jsonrpc.queue(response);
           }
           if (isDef(resp.result) && !isDef(resp.dontNotify)) {
             if (isDef(resp.value)) {
@@ -835,7 +883,7 @@ jet.Peer = function (config) {
             } else {
               desc.value = value;
             }
-            queue({
+            jsonrpc.queue({
               method: "change",
               params: {
                 path: desc.path,
@@ -843,16 +891,14 @@ jet.Peer = function (config) {
               }
             });
           }
-          if (!willFlush && !resp.dontFlush) {
-            flush();
-          }
+          jsonrpc.flush(resp.dontNotify);
         };
         try {
           desc.setAsync(value, reply);
         } catch (err) {
           var mid = message.id;
           if (isDef(mid)) {
-            queue({
+            jsonrpc.queue({
               id: mid,
               error: errorObject(err)
             });
@@ -863,7 +909,7 @@ jet.Peer = function (config) {
       dispatch = function (message) {
         var mid = message.id;
         if (isDef(mid)) {
-          queue({
+          jsonrpc.queue({
             id: mid,
             error: invalidParams(desc.path + " is read-only")
           });
@@ -874,51 +920,19 @@ jet.Peer = function (config) {
     ref.value = function (value) {
       if (isDef(value)) {
         desc.value = value;
-        queue({
+        jsonrpc.queue({
           method: "change",
           params: {
             path: desc.path,
             value: value
           }
         });
-        if (!willFlush) {
-          flush();
-        }
+        jsonrpc.flush();
       } else {
         return desc.value;
       }
     };
     return ref;
-  };
-  wsock.onclose = function () {
-    closed = true;
-    if (config.onClose) {
-      config.onClose();
-    }
-  };
-  wsock.onerror = function (err) {
-    closed = true;
-    if (config.onError) {
-      config.onError(err);
-    }
-  };
-  wsock.onopen = function () {
-    if (isDef(config.name)) {
-      that.config({ name: config.name }, {
-        success: function () {
-          flush();
-          if (config.onOpen) {
-            config.onOpen(that);
-          }
-        },
-        error: function () {
-          that.close();
-        }
-      });
-    } else if (config.onOpen) {
-      config.onOpen(that);
-    }
-    flush();
   };
   return that;
 };
@@ -970,6 +984,7 @@ return module.exports;
 
 });
 
+require('jsonrpc');
 require('peer');
 require('util');
 };
