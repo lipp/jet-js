@@ -111,6 +111,18 @@ jet.JsonRPC = function(config) {
 
   wsock.onmessage = dispatchMessage;
 
+  var addHook = function(callbacks, callbackName, hook) {
+    if (callbacks[callbackName]) {
+      var orig = callbacks[callbackName];
+      callbacks[callbackName] = function(result) {
+        hook();
+        orig(result);
+      };
+    } else {
+      callbacks[callbackName] = hook;
+    }
+  };
+
   var id = 0;
   this.service = function (method, params, complete, callbacks) {
     var rpcId;
@@ -126,18 +138,11 @@ jet.JsonRPC = function(config) {
       id = id + 1;
       rpcId = id;
       if (complete) {
-        ['success','error'].forEach(function(cb) {
-          if (callbacks[cb]) {
-            var orig = callbacks[cb];
-            callbacks[cb] = function(result) {
-              complete(cb === 'success');
-              orig(result);
-            };
-          } else {
-            callbacks[cb] = function() {
-              complete(cb === 'success');
-            };
-          }
+        addHook(callbacks, 'success', function() {
+          complete(true);
+        });
+        addHook(callbacks, 'error', function() {
+          complete(false);
         });
       }
       responseDispatchers[id] = callbacks;
