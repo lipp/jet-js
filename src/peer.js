@@ -35,19 +35,12 @@ jet.Peer = function (config) {
     jsonrpc.service('add', params, addDispatcher, callbacks);
     var ref = {
       remove: function (callbacks) {
-        if (ref.isAdded()) {
-          that.remove(path, callbacks);
-        } else {
-          callbacks.success();
-        }
+        that.remove(path, callbacks);
       },
       isAdded: function () {
         return jsonrpc.hasRequestDispatcher(path);
       },
       add: function (value, callbacks) {
-        if (ref.isAdded()) {
-          callbacks.success();
-        }
         if (isDef(value)) {
           desc.value = value;
         }
@@ -79,10 +72,6 @@ jet.Peer = function (config) {
     jsonrpc.service('call', params, null, callbacks);
   };
 
-  that.config = function (params, callbacks) {
-    jsonrpc.service('config', params, null, callbacks);
-  };
-
   that.set = function (path, value, callbacks) {
     var params = {
       path: path,
@@ -110,6 +99,7 @@ jet.Peer = function (config) {
         }
       });
     };
+    /* istanbul ignore else */
     if (typeof (params) === 'string') {
       params = {
         path: {
@@ -155,6 +145,7 @@ jet.Peer = function (config) {
           err = e;
         }
         var mid = message.id;
+        /* istanbul ignore else */
         if (isDef(mid)) {
           if (!isDef(err)) {
             jsonrpc.queue({
@@ -181,9 +172,9 @@ jet.Peer = function (config) {
             if (isDef(resp.result) && !isDef(resp.error)) {
               response.result = resp.result;
             } else if (isDef(resp.error)) {
-              response.error = resp.error;
+              response.error = errorObject(resp.error);
             } else {
-              response.error = 'jet.peer Invalid async method response ' + desc.path;
+              response.error = errorObject('jet.peer Invalid async method response ' + desc.path);
             }
             jsonrpc.queue(response);
             jsonrpc.flush();
@@ -225,12 +216,14 @@ jet.Peer = function (config) {
           var result = desc.set(value) || {};
           desc.value = result.value || value;
           var mid = message.id;
+          /* istanbul ignore else */
           if (isDef(mid)) {
             jsonrpc.queue({
               id: mid,
               result: true
             });
           }
+          /* istanbul ignore else */
           if (!result.dontNotify) {
             jsonrpc.queue({
               method: 'change',
@@ -241,6 +234,7 @@ jet.Peer = function (config) {
             });
           }
         } catch (err) {
+          /* istanbul ignore else */
           if (isDef(message.id)) {
             jsonrpc.queue({
               id: message.id,
@@ -256,6 +250,7 @@ jet.Peer = function (config) {
           var mid = message.id;
           resp = resp || {};
           resp.result = isDef(resp.result) || value;
+          /* istanbul ignore else */
           if (isDef(mid)) {
             var response = {
               id: mid
@@ -267,6 +262,7 @@ jet.Peer = function (config) {
             }
             jsonrpc.queue(response);
           }
+          /* istanbul ignore else */
           if (isDef(resp.result) && !isDef(resp.dontNotify)) {
             if (isDef(resp.value)) {
               desc.value = resp.value;
@@ -287,6 +283,7 @@ jet.Peer = function (config) {
           desc.setAsync(value, reply);
         } catch (err) {
           var mid = message.id;
+          /* istanbul ignore else */
           if (isDef(mid)) {
             jsonrpc.queue({
               id: mid,
@@ -299,6 +296,7 @@ jet.Peer = function (config) {
     } else {
       dispatch = function (message) {
         var mid = message.id;
+        /* istanbul ignore else */
         if (isDef(mid)) {
           jsonrpc.queue({
             id: mid,
