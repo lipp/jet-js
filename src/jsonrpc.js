@@ -29,6 +29,7 @@ jet.JsonRPC = function(config) {
       encoded = encode(messages);
     }
     if (encoded) {
+      /* istanbul ignore else */
       if (config.onSend) {
         config.onSend(encoded, messages);
       }
@@ -57,12 +58,16 @@ jet.JsonRPC = function(config) {
     var mid = message.id;
     var callbacks = responseDispatchers[mid];
     delete responseDispatchers[mid];
+    /* istanbul ignore else */
     if (callbacks) {
+      /* istanbul ignore else */
       if (isDef(message.result)) {
+        /* istanbul ignore else */
         if (callbacks.success) {
           callbacks.success(message.result);
         }
       } else if (isDef(message.error)) {
+        /* istanbul ignore else */
         if (callbacks.error) {
           callbacks.error(message.error);
         }
@@ -76,6 +81,7 @@ jet.JsonRPC = function(config) {
     try {
       dispatcher(message);
     } catch (err) {
+      /* istanbul ignore else */
       if (isDef(message.id)) {
         that.queue({
           id: message.id,
@@ -96,6 +102,7 @@ jet.JsonRPC = function(config) {
   var dispatchMessage = function (message) {
     var decoded = decode(message.data);
     willFlush = true;
+    /* istanbul ignore else */
     if (config.onReceive) {
       config.onReceive(message.data, decoded);
     }
@@ -126,6 +133,7 @@ jet.JsonRPC = function(config) {
   var id = 0;
   this.service = function (method, params, complete, callbacks) {
     var rpcId;
+    /* istanbul ignore else */
     if (closed) {
       throw new Error('Jet Websocket connection is closed');
     }
@@ -137,6 +145,7 @@ jet.JsonRPC = function(config) {
       params.timeout = callbacks.timeout;
       id = id + 1;
       rpcId = id;
+      /* istanbul ignore else */
       if (complete) {
         addHook(callbacks, 'success', function() {
           complete(true);
@@ -179,6 +188,7 @@ jet.JsonRPC = function(config) {
 
   wsock.onclose = function () {
     closed = true;
+    /* istanbul ignore else */
     if (config.onClose) {
       config.onClose();
     }
@@ -186,6 +196,7 @@ jet.JsonRPC = function(config) {
 
   wsock.onerror = function (err) {
     closed = true;
+    /* istanbul ignore else */
     if (config.onError) {
       config.onError(err);
     }
@@ -196,12 +207,14 @@ jet.JsonRPC = function(config) {
   };
 
   wsock.onopen = function () {
+    /* istanbul ignore else */
     if (isDef(config.name)) {
       that.config({
         name: config.name
       }, {
         success: function () {
           that.flush();
+          /* istanbul ignore else */
           if (config.onOpen) {
             config.onOpen();
           }
