@@ -1,8 +1,8 @@
 {
 	"name": "jet",
-	"version": "0.7.0",
-	"main": "./peer.js",
-	"description": "A Jet Peer implementation. Visit: http://jetbus.io ",
+	"version": "0.8.0",
+	"main": "./deploy/jet.js",
+	"description": "Jet Peer implementation for Browsers. Visit: http://jetbus.io ",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
@@ -10,6 +10,12 @@
 	},
 	"ignore": [
 		".gitignore",
-		"*.md"
+		"*.md",
+		"tests",
+		"package.json",
+		"**/.*",
+		"karma.conf.js",
+		"coverage",
+		"*.sh"
 	]
 }
