@@ -1,10 +1,10 @@
 describe('Jet module', function() {
   it('jet is an Object', function() {
-    expect(jet).to.be.an.object;
+    expect(jet).to.be.an('object');
   });
 
   it('jet.Peer is a Function', function() {
-    expect(jet).to.be.a.function;
+    expect(jet.Peer).to.be.a('function');
   });
 
   it('a jet peer can connect to the jet daemon', function(done) {
