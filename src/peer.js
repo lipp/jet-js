@@ -5,84 +5,84 @@
 var jet = window.jet = window.jet || {};
 
 jet.Peer = function (config) {
-  config = config || {};
-  var isDef = jet.util.isDef;
-  var isArr = jet.util.isArr;
-  var invalidParams = jet.util.invalidParams;
-  var errorObject = jet.util.errorObject;
-  var jsonrpc = new jet.JsonRPC(config);
-  var that = this;
+	config = config || {};
+	var isDef = jet.util.isDef;
+	var isArr = jet.util.isArr;
+	var invalidParams = jet.util.invalidParams;
+	var errorObject = jet.util.errorObject;
+	var jsonrpc = new jet.JsonRPC(config);
+	var that = this;
 
-  that.close = function () {
-    jsonrpc.close();
-  };
+	that.close = function () {
+		jsonrpc.close();
+	};
 
-  that.batch = function(action) {
-    jsonrpc.batch(action);
-  };
+	that.batch = function (action) {
+		jsonrpc.batch(action);
+	};
 
-  that.add = function (desc, dispatch, callbacks) {
-    var path = desc.path;
-    var addDispatcher = function (success) {
-      if (success) {
-        jsonrpc.addRequestDispatcher(path, dispatch);
-      }
-    };
-    var params = {
-      path: path,
-      value: desc.value
-    };
-    jsonrpc.service('add', params, addDispatcher, callbacks);
-    var ref = {
-      remove: function (callbacks) {
-        that.remove(path, callbacks);
-      },
-      isAdded: function () {
-        return jsonrpc.hasRequestDispatcher(path);
-      },
-      add: function (value, callbacks) {
-        if (isDef(value)) {
-          desc.value = value;
-        }
-        that.add(desc, dispatch, callbacks);
-      },
-      path: function () {
-        return path;
-      }
-    };
-    return ref;
-  };
+	that.add = function (desc, dispatch, callbacks) {
+		var path = desc.path;
+		var addDispatcher = function (success) {
+			if (success) {
+				jsonrpc.addRequestDispatcher(path, dispatch);
+			}
+		};
+		var params = {
+			path: path,
+			value: desc.value
+		};
+		jsonrpc.service('add', params, addDispatcher, callbacks);
+		var ref = {
+			remove: function (callbacks) {
+				that.remove(path, callbacks);
+			},
+			isAdded: function () {
+				return jsonrpc.hasRequestDispatcher(path);
+			},
+			add: function (value, callbacks) {
+				if (isDef(value)) {
+					desc.value = value;
+				}
+				that.add(desc, dispatch, callbacks);
+			},
+			path: function () {
+				return path;
+			}
+		};
+		return ref;
+	};
 
-  that.remove = function (path, callbacks) {
-    var params = {
-      path: path
-    };
-    var removeDispatcher = function () {
-      jsonrpc.removeRequestDispatcher(path);
-    };
-    jsonrpc.service('remove', params, removeDispatcher, callbacks);
-  };
+	that.remove = function (path, callbacks) {
+		var params = {
+			path: path
+		};
+		var removeDispatcher = function () {
+			jsonrpc.removeRequestDispatcher(path);
+		};
+		jsonrpc.service('remove', params, removeDispatcher, callbacks);
+	};
 
-  that.call = function (path, callparams, callbacks) {
-    var params = {
-      path: path,
-      args: callparams || [],
-      timeout: callbacks && callbacks.timeout // optional
-    };
-    jsonrpc.service('call', params, null, callbacks);
-  };
+	that.call = function (path, callparams, callbacks) {
+		var params = {
+			path: path,
+			args: callparams || [],
+			timeout: callbacks && callbacks.timeout // optional
+		};
+		jsonrpc.service('call', params, null, callbacks);
+	};
 
-  that.set = function (path, value, callbacks) {
-    var params = {
-      path: path,
-      value: value,
-      valueAsResult: callbacks && callbacks.valueAsResult, // optional
-      timeout: callbacks && callbacks.timeout // optional
-    };
-    jsonrpc.service('set', params, null, callbacks);
-  };
+	that.set = function (path, value, callbacks) {
+		var params = {
+			path: path,
+			value: value,
+			valueAsResult: callbacks && callbacks.valueAsResult, // optional
+			timeout: callbacks && callbacks.timeout // optional
+		};
+		jsonrpc.service('set', params, null, callbacks);
+	};
 
-  var fetchId = 0;
+	var fetchId = 0;
 
 	var createFetchDispatcher = function (params, f, ref) {
 		if (isDef(params.sort)) {
@@ -112,7 +112,7 @@ jet.Peer = function (config) {
 		}
 	};
 
-  that.fetch = function (params, f, callbacks) {
+	that.fetch = function (params, f, callbacks) {
 		var id = '__f__' + fetchId;
 		var sorting = params.sort;
 		fetchId = fetchId + 1;
@@ -148,98 +148,98 @@ jet.Peer = function (config) {
 		return ref;
 	};
 
-  that.method = function (desc, addCallbacks) {
-    var dispatch;
-    if (desc.call) {
-      dispatch = function (message) {
-        var params = message.params;
-        var result;
-        var err;
-        try {
-          if (isArr(params) && params.length > 0) {
-            result = desc.call.apply(undefined, params);
-          } else {
-            result = desc.call.call(undefined, params);
-          }
-        } catch (e) {
-          err = e;
-        }
-        var mid = message.id;
-        /* istanbul ignore else */
-        if (isDef(mid)) {
-          if (!isDef(err)) {
-            jsonrpc.queue({
-              id: mid,
-              result: result || {}
-            });
-          } else {
-            jsonrpc.queue({
-              id: mid,
-              error: errorObject(err)
-            });
-          }
-        }
-      };
-    } else if (desc.callAsync) {
-      dispatch = function (message) {
-        var reply = function (resp) {
-          var mid = message.id;
-          resp = resp || {};
-          if (isDef(mid)) {
-            var response = {
-              id: mid
-            };
-            if (isDef(resp.result) && !isDef(resp.error)) {
-              response.result = resp.result;
-            } else if (isDef(resp.error)) {
-              response.error = errorObject(resp.error);
-            } else {
-              response.error = errorObject('jet.peer Invalid async method response ' + desc.path);
-            }
-            jsonrpc.queue(response);
-            jsonrpc.flush();
-          }
-        };
+	that.method = function (desc, addCallbacks) {
+		var dispatch;
+		if (desc.call) {
+			dispatch = function (message) {
+				var params = message.params;
+				var result;
+				var err;
+				try {
+					if (isArr(params) && params.length > 0) {
+						result = desc.call.apply(undefined, params);
+					} else {
+						result = desc.call.call(undefined, params);
+					}
+				} catch (e) {
+					err = e;
+				}
+				var mid = message.id;
+				/* istanbul ignore else */
+				if (isDef(mid)) {
+					if (!isDef(err)) {
+						jsonrpc.queue({
+							id: mid,
+							result: result || {}
+						});
+					} else {
+						jsonrpc.queue({
+							id: mid,
+							error: errorObject(err)
+						});
+					}
+				}
+			};
+		} else if (desc.callAsync) {
+			dispatch = function (message) {
+				var reply = function (resp) {
+					var mid = message.id;
+					resp = resp || {};
+					if (isDef(mid)) {
+						var response = {
+							id: mid
+						};
+						if (isDef(resp.result) && !isDef(resp.error)) {
+							response.result = resp.result;
+						} else if (isDef(resp.error)) {
+							response.error = errorObject(resp.error);
+						} else {
+							response.error = errorObject('jet.peer Invalid async method response ' + desc.path);
+						}
+						jsonrpc.queue(response);
+						jsonrpc.flush();
+					}
+				};
 
-        var params = message.params;
+				var params = message.params;
 
-        try {
-          if (isArr(params) && params.length > 0) {
-            params.push(reply);
-            desc.callAsync.apply(undefined, params);
-          } else {
-            desc.callAsync.call(undefined, params, reply);
-          }
-        } catch (err) {
-          var mid = message.id;
-          if (isDef(mid)) {
-            jsonrpc.queue({
-              id: mid,
-              error: errorObject(err)
-            });
-          }
-        }
-      };
-    } else {
-      throw 'invalid method desc' + (desc.path || '?');
-    }
-    var ref = that.add(desc, dispatch, addCallbacks);
-    return ref;
-  };
+				try {
+					if (isArr(params) && params.length > 0) {
+						params.push(reply);
+						desc.callAsync.apply(undefined, params);
+					} else {
+						desc.callAsync.call(undefined, params, reply);
+					}
+				} catch (err) {
+					var mid = message.id;
+					if (isDef(mid)) {
+						jsonrpc.queue({
+							id: mid,
+							error: errorObject(err)
+						});
+					}
+				}
+			};
+		} else {
+			throw 'invalid method desc' + (desc.path || '?');
+		}
+		var ref = that.add(desc, dispatch, addCallbacks);
+		return ref;
+	};
 
-  that.state = function (desc, addCallbacks) {
-    var dispatch;
-    if (desc.set) {
-      dispatch = function (message) {
-        var value = message.params.value;
-        try {
-          var result = desc.set(value) || {};
+	that.state = function (desc, addCallbacks) {
+		var dispatch;
+		if (desc.set) {
+			dispatch = function (message) {
+				var value = message.params.value;
+				try {
+					var result = desc.set(value) || {};
 					if (isDef(result.value)) {
 						desc.value = result.value;
 					} else {
 						desc.value = value;
 					}
-          /* istanbul ignore else */
+					/* istanbul ignore else */
 					if (isDef(message.id)) {
 						var resp = {};
 						resp.id = message.id;
@@ -249,111 +249,111 @@ jet.Peer = function (config) {
 							resp.result = true;
 						}
 						jsonrpc.queue(resp);
-          }
-          /* istanbul ignore else */
-          if (!result.dontNotify) {
-            jsonrpc.queue({
-              method: 'change',
-              params: {
-                path: desc.path,
-                value: desc.value
-              }
-            });
-          }
-        } catch (err) {
-          /* istanbul ignore else */
-          if (isDef(message.id)) {
-            jsonrpc.queue({
-              id: message.id,
-              error: errorObject(err)
-            });
-          }
-        }
-      };
-    } else if (isDef(desc.setAsync)) {
-      dispatch = function (message) {
-        var value = message.params.value;
-        var reply = function (resp) {
-          var mid = message.id;
-          resp = resp || {};
+					}
+					/* istanbul ignore else */
+					if (!result.dontNotify) {
+						jsonrpc.queue({
+							method: 'change',
+							params: {
+								path: desc.path,
+								value: desc.value
+							}
+						});
+					}
+				} catch (err) {
+					/* istanbul ignore else */
+					if (isDef(message.id)) {
+						jsonrpc.queue({
+							id: message.id,
+							error: errorObject(err)
+						});
+					}
+				}
+			};
+		} else if (isDef(desc.setAsync)) {
+			dispatch = function (message) {
+				var value = message.params.value;
+				var reply = function (resp) {
+					var mid = message.id;
+					resp = resp || {};
 					if (isDef(resp.value)) {
 						desc.value = resp.value;
 					} else {
 						desc.value = value;
 					}
-          /* istanbul ignore else */
-          if (isDef(mid)) {
-            var response = {
-              id: mid
-            };
-            if (!isDef(resp.error)) {
+					/* istanbul ignore else */
+					if (isDef(mid)) {
+						var response = {
+							id: mid
+						};
+						if (!isDef(resp.error)) {
 							if (message.params.valueAsResult) {
 								response.result = desc.value;
 							} else {
 								response.result = true;
 							}
-            } else {
-              response.error = errorObject(resp.error);
-            }
-            jsonrpc.queue(response);
-          }
-          /* istanbul ignore else */
+						} else {
+							response.error = errorObject(resp.error);
+						}
+						jsonrpc.queue(response);
+					}
+					/* istanbul ignore else */
 					if (!isDef(resp.error) && !isDef(resp.dontNotify)) {
-            jsonrpc.queue({
-              method: 'change',
-              params: {
-                path: desc.path,
-                value: desc.value
-              }
-            });
-          }
-          jsonrpc.flush(resp.dontNotify);
-        };
-        try {
-          desc.setAsync(value, reply);
-        } catch (err) {
-          var mid = message.id;
-          /* istanbul ignore else */
-          if (isDef(mid)) {
-            jsonrpc.queue({
-              id: mid,
-              error: errorObject(err)
-            });
+						jsonrpc.queue({
+							method: 'change',
+							params: {
+								path: desc.path,
+								value: desc.value
+							}
+						});
+					}
+					jsonrpc.flush(resp.dontNotify);
+				};
+				try {
+					desc.setAsync(value, reply);
+				} catch (err) {
+					var mid = message.id;
+					/* istanbul ignore else */
+					if (isDef(mid)) {
+						jsonrpc.queue({
+							id: mid,
+							error: errorObject(err)
+						});
 
-          }
-        }
-      };
-    } else {
-      dispatch = function (message) {
-        var mid = message.id;
-        /* istanbul ignore else */
-        if (isDef(mid)) {
-          jsonrpc.queue({
-            id: mid,
-            error: invalidParams(desc.path + ' is read-only')
-          });
-        }
-      };
-    }
-    var ref = that.add(desc, dispatch, addCallbacks);
-    ref.value = function (value) {
-      if (isDef(value)) {
-        desc.value = value;
-        jsonrpc.queue({
-          method: 'change',
-          params: {
-            path: desc.path,
-            value: value
-          }
-        });
-        jsonrpc.flush();
-      } else {
-        return desc.value;
-      }
-    };
-    return ref;
-  };
+					}
+				}
+			};
+		} else {
+			dispatch = function (message) {
+				var mid = message.id;
+				/* istanbul ignore else */
+				if (isDef(mid)) {
+					jsonrpc.queue({
+						id: mid,
+						error: invalidParams(desc.path + ' is read-only')
+					});
+				}
+			};
+		}
+		var ref = that.add(desc, dispatch, addCallbacks);
+		ref.value = function (value) {
+			if (isDef(value)) {
+				desc.value = value;
+				jsonrpc.queue({
+					method: 'change',
+					params: {
+						path: desc.path,
+						value: value
+					}
+				});
+				jsonrpc.flush();
+			} else {
+				return desc.value;
+			}
+		};
+		return ref;
+	};
 
 
-  return that;
+	return that;
 };
