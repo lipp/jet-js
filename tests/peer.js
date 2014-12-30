@@ -501,7 +501,7 @@ describe('Jet module', function() {
       });
     });
 
-    it('can fetch and unfetch', function(done) {
+        it('can fetch and unfetch', function(done) {
       var setupOK;
       var fetcher = peer.fetch('bla', function(){}, {
         success: function() {
@@ -520,6 +520,58 @@ describe('Jet module', function() {
             }
           });
         }
+      });
+    });
+
+    it('fetch with sorting', function(done) {
+      var fetcher = peer.fetch({
+        path: {
+          startsWith: 'a'
+        },
+        sort: {
+          byPath: true,
+          from: 2,
+          to: 3
+        }
+      }, function(changes, n, ref) {
+        expect(changes).to.deep.equal([{
+          path: 'acceptAllButSlow',
+          value: 123,
+          index: 2
+        },{
+          path: 'acceptOnlyNumbers',
+          value: 4112,
+          index: 3
+        }]);
+        expect(n).to.equal(2);
+        expect(ref).to.equal(fetcher);
+        done();
+      });
+    });
+
+    it('fetch with sorting asArray', function(done) {
+      var fetcher = peer.fetch({
+        path: {
+          startsWith: 'a'
+        },
+        sort: {
+          byPath: true,
+          asArray: true,
+          from: 2,
+          to: 3
+        }
+      }, function(arr, ref) {
+        expect(arr).to.deep.equal([{
+          path: 'acceptAllButSlow',
+          value: 123,
+          index: 2
+        },{
+          path: 'acceptOnlyNumbers',
+          value: 4112,
+          index: 3
+        }]);
+        expect(ref).to.equal(fetcher);
+        done();
       });
     });
 

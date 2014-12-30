@@ -84,49 +84,69 @@ jet.Peer = function (config) {
 
   var fetchId = 0;
 
+	var createFetchDispatcher = function (params, f, ref) {
+		if (isDef(params.sort)) {
+			if (params.sort.asArray) {
+				delete params.sort.asArray; // peer internal param
+				var arr = [];
+				var from = params.sort.from;
+				return function (message) {
+					var params = message.params;
+					arr.length = params.n;
+					params.changes.forEach(function (change) {
+						arr[change.index - from] = change;
+					});
+					f(arr, ref);
+				};
+			} else {
+				return function (message) {
+					var params = message.params;
+					f(params.changes, params.n, ref);
+				};
+			}
+		} else {
+			return function (message) {
+				var params = message.params;
+				f(params.path, params.event, params.value, ref);
+			};
+		}
+	};
+
   that.fetch = function (params, f, callbacks) {
-    var id = '__f__' + fetchId;
-    var sorting = params.sort;
-    fetchId = fetchId + 1;
-    var ref;
-    var addFetcher = function () {
-      jsonrpc.addRequestDispatcher(id,function (message) {
-        var params = message.params;
-        if (!isDef(sorting)) {
-          f(params.path, params.event, params.value, ref);
-        } else {
-          f(params.changes, params.n, ref);
-        }
-      });
-    };
-    /* istanbul ignore else */
-    if (typeof (params) === 'string') {
-      params = {
-        path: {
-          contains: params
-        }
-      };
-    }
-    params.id = id;
-    jsonrpc.service('fetch', params, addFetcher, callbacks);
-    ref = {
-      unfetch: function (callbacks) {
-        var removeDispatcher = function () {
-          jsonrpc.removeRequestDispatcher(id);
-        };
-        jsonrpc.service('unfetch', {
-          id: id
-        }, removeDispatcher, callbacks);
-      },
-      isFetching: function () {
-        return jsonrpc.hasRequestDispatcher(id);
-      },
-      fetch: function (callbacks) {
-        jsonrpc.service('fetch', params, addFetcher, callbacks);
-      }
-    };
-    return ref;
-  };
+		var id = '__f__' + fetchId;
+		var sorting = params.sort;
+		fetchId = fetchId + 1;
+		var ref = {};
+		var fetchDispatcher = createFetchDispatcher(params, f, ref);
+		var addFetcher = function () {
+			jsonrpc.addRequestDispatcher(id, fetchDispatcher);
+		};
+		/* istanbul ignore else */
+		if (typeof (params) === 'string') {
+			params = {
+				path: {
+					contains: params
+				}
+			};
+		}
+		params.id = id;
+		jsonrpc.service('fetch', params, addFetcher, callbacks);
+		ref.unfetch = function (callbacks) {
+			var removeDispatcher = function () {
+				jsonrpc.removeRequestDispatcher(id);
+			};
+			jsonrpc.service('unfetch', {
+				id: id
+			}, removeDispatcher, callbacks);
+		};
+		ref.isFetching = function () {
+			return jsonrpc.hasRequestDispatcher(id);
+		};
+		ref.fetch = function (callbacks) {
+			jsonrpc.service('fetch', params, addFetcher, callbacks);
+		};
+		return ref;
+	};
 
   that.method = function (desc, addCallbacks) {
     var dispatch;
@@ -214,14 +234,21 @@ jet.Peer = function (config) {
         var value = message.params.value;
         try {
           var result = desc.set(value) || {};
-          desc.value = result.value || value;
-          var mid = message.id;
+					if (isDef(result.value)) {
+						desc.value = result.value;
+					} else {
+						desc.value = value;
+					}
           /* istanbul ignore else */
-          if (isDef(mid)) {
-            jsonrpc.queue({
-              id: mid,
-              result: true
-            });
+					if (isDef(message.id)) {
+						var resp = {};
+						resp.id = message.id;
+						if (message.params.valueAsResult) {
+							resp.result = desc.value;
+						} else {
+							resp.result = true;
+						}
+						jsonrpc.queue(resp);
           }
           /* istanbul ignore else */
           if (!result.dontNotify) {
@@ -249,26 +276,29 @@ jet.Peer = function (config) {
         var reply = function (resp) {
           var mid = message.id;
           resp = resp || {};
-          resp.result = isDef(resp.result) || value;
+					if (isDef(resp.value)) {
+						desc.value = resp.value;
+					} else {
+						desc.value = value;
+					}
           /* istanbul ignore else */
           if (isDef(mid)) {
             var response = {
               id: mid
             };
             if (!isDef(resp.error)) {
-              response.result = resp.result;
+							if (message.params.valueAsResult) {
+								response.result = desc.value;
+							} else {
+								response.result = true;
+							}
             } else {
               response.error = errorObject(resp.error);
             }
             jsonrpc.queue(response);
           }
           /* istanbul ignore else */
-          if (isDef(resp.result) && !isDef(resp.dontNotify)) {
-            if (isDef(resp.value)) {
-              desc.value = resp.value;
-            } else {
-              desc.value = value;
-            }
+					if (!isDef(resp.error) && !isDef(resp.dontNotify)) {
             jsonrpc.queue({
               method: 'change',
               params: {
