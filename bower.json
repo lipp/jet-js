@@ -1,6 +1,6 @@
 {
 	"name": "jet",
-	"version": "0.9.0",
+	"version": "0.9.1",
 	"main": "./deploy/jet.js",
 	"description": "Jet Peer implementation for Browsers. Visit: http://jetbus.io ",
 	"license": "MIT",
