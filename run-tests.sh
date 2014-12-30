@@ -4,4 +4,3 @@ sleep 2
 ./node_modules/.bin/some-service.js &
 sleep 2
 ./node_modules/karma/bin/karma start --browsers Firefox --single-run
-./node_modules/coveralls/bin/coveralls.js < coverage/report-lcov/lcov.info

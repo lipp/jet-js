@@ -30,6 +30,7 @@
   "devDependencies": {
     "chai": "*",
     "coveralls": "*",
+    "js-beautify": "^1.5.4",
     "karma": "*",
     "karma-chai": "*",
     "karma-chrome-launcher": "*",
