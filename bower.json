@@ -2,12 +2,19 @@
 	"name": "jet",
 	"version": "0.9.1",
 	"main": "./deploy/jet.js",
-	"description": "Jet Peer implementation for Browsers. Visit: http://jetbus.io ",
+	"description": "Jet Realtime Bus (Peer) implementation for Browsers. Visit: http://jetbus.io ",
 	"license": "MIT",
+	"homepage": "https://github.com/lipp/jet-js",
 	"repository": {
 		"type": "git",
 		"url": "git://github.com/lipp/jet-js.git"
 	},
+	"keywords": [
+    "jet",
+    "realtime",
+    "bus",
+    "ipc"
+  ],
 	"ignore": [
 		".gitignore",
 		"*.md",
