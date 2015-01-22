@@ -438,5 +438,3 @@ setTimeout(function() {
   ticker.value(++old);
 },1000);
 ```
-
-## `vasdvk`
