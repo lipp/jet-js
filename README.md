@@ -1,3 +1,10 @@
+# DEPRECATED
+
+This repo is DEPRECATED.
+
+jet-js is now part of [node-jet](http://github.com/lipp/node-jet). Jet can be either `required` with browserify or directly included as [single file/global](https://github.com/lipp/node-jet/tree/master/build).
+
+
 # About
 
 Javascript Peer implementation of the Jet Protocol. Visit the
